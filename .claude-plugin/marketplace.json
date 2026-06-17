@@ -1,0 +1,17 @@
+{
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
+  "name": "ponytail-sec",
+  "description": "Security-hardening review for AI agents. The smallest change that ruins an attacker's day.",
+  "owner": {
+    "name": "Andy Pitcher",
+    "url": "https://github.com/andypitcher"
+  },
+  "plugins": [
+    {
+      "name": "ponytail-sec",
+      "description": "Butterfly-effect security pass: finds the smallest diff that breaks the attack chain. Lists findings, applies nothing.",
+      "source": "./",
+      "category": "security"
+    }
+  ]
+}

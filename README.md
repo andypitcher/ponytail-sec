@@ -1,8 +1,14 @@
-<!-- logo: TODO — reuse ponytail character with a "sec" hat (assets/logo.png + dark variant) -->
+<p align="center">
+  <img src="assets/logo.png" width="220" alt="ponytail-sec, the lazy senior security engineer">
+</p>
 
-# ponytail-sec
+<h1 align="center">ponytail-sec</h1>
 
-> The smallest change that ruins an attacker's day.
+<p align="center">
+  <em>The smallest change that ruins an attacker's day.</em>
+</p>
+
+---
 
 ponytail's security sibling. Instead of flooding you with findings, it hunts
 the one dropped capability, the one `readOnlyRootFilesystem: true`, the one
@@ -35,6 +41,31 @@ containers:
 ```
 
 One diff. One closed kill-chain link.
+
+## How it works
+
+Three passes, in order:
+
+```
+1. Code review    Does this code need to exist at all?
+                  Apply the ponytail lens first: YAGNI, stdlib first,
+                  remove over refactor. Fewer lines = smaller attack surface.
+
+2. Dependency     Does this dependency need to exist?
+                  Every dep is supply-chain surface. For each one, ask:
+                    a. Does stdlib or the platform already do this?  → remove the dep
+                    b. Is it maintained by a single person, or has a
+                       low OpenSSF Scorecard / no recent commits?    → fork or vendor
+                    c. Does it bring more than it costs?             → keep, pin to digest
+                  Prefer: remove > stdlib > vendor > pin > keep.
+
+3. Hardening      What privilege, filesystem, network, or secret exposure
+                  breaks a link in the attack chain?
+                  Rank by attacker leverage removed ÷ lines changed.
+                  The smallest change that ruins an attacker's day wins.
+```
+
+Report only what breaks an attack path. Security theater goes unreported.
 
 ## Safe by design
 
