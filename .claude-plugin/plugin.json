@@ -1,0 +1,13 @@
+{
+  "name": "ponytail-sec",
+  "version": "0.1.0",
+  "description": "Security-hardening review. Finds the one dropped capability, the one readOnlyRootFilesystem, the one narrowed RBAC verb that kills a link in the attack chain.",
+  "author": {
+    "name": "Andy Pitcher",
+    "url": "https://github.com/andypitcher"
+  },
+  "license": "MIT",
+  "homepage": "https://github.com/andypitcher/ponytail-sec",
+  "repository": "https://github.com/andypitcher/ponytail-sec",
+  "keywords": ["security", "hardening", "owasp", "kubernetes", "rbac", "supply-chain"]
+}
