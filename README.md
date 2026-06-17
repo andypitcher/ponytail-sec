@@ -1,6 +1,14 @@
-# ponytail-sec
+<p align="center">
+  <img src="assets/logo.png" width="220" alt="ponytail-sec, the lazy senior security engineer">
+</p>
 
-> The smallest change that ruins an attacker's day.
+<h1 align="center">ponytail-sec</h1>
+
+<p align="center">
+  <em>The smallest change that ruins an attacker's day.</em>
+</p>
+
+---
 
 ponytail's security sibling. Instead of flooding you with findings, it hunts
 the one dropped capability, the one `readOnlyRootFilesystem: true`, the one
