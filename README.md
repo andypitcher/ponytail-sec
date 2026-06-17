@@ -36,19 +36,20 @@ One diff. One closed kill-chain link.
 
 ## How it works
 
-Before flagging anything, run the chain. Stop at the first link that kills attacker leverage:
+Three passes, in order:
 
 ```
-1. Does this dependency need to exist? → no: remove it    (each dep is supply-chain surface)
-2. Is the process running as root?     → runAsNonRoot: true
-3. Does the filesystem need writes?    → readOnlyRootFilesystem: true
-4. Are capabilities granted?           → capabilities.drop: ["ALL"]
-5. Are RBAC verbs wider than needed?  → narrow to ["get","list","watch"] or less
-6. Is a secret in plaintext?          → externalise to a Kubernetes Secret or vault reference
-7. Is the image tag mutable?          → pin to digest or semver
+1. Supply chain   Does this dependency need to exist?
+                  Every dep is attack surface. Prefer remove over keep.
+
+2. Hardening      What privilege, filesystem, network, or secret exposure
+                  can be eliminated? Smallest change that closes the path.
+
+3. Kill chain     Which finding removes the most attacker leverage per line
+                  changed? Score and rank. Report the winner, not the list.
 ```
 
-One finding per broken link. No findings that add theater without closing a path.
+Report only what breaks an attack path. Security theater goes unreported.
 
 ## Safe by design
 
