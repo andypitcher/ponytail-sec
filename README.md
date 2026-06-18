@@ -42,6 +42,15 @@ containers:
 
 One diff. One closed kill-chain link.
 
+## Install
+
+### Claude Code
+
+```
+/plugin marketplace add andypitcher/ponytail-sec
+/plugin install ponytail-sec@ponytail-sec
+```
+
 ## How it works
 
 Three passes, in order:
