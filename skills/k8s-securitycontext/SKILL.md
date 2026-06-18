@@ -3,7 +3,7 @@ name: k8s-securitycontext
 description: >
   Binary Kubernetes securityContext hardening check. Use when reviewing Pods,
   Deployments, StatefulSets, DaemonSets, Jobs, CronJobs, Helm templates, or
-  Kubernetes manifests that define containers. Minimal output only: OK or NOT_OK.
+  Kubernetes manifests that define containers. Minimal output only: OK or NOT_OK: RULE, RULE.
 license: MIT
 ---
 
