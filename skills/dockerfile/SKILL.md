@@ -3,7 +3,7 @@ name: dockerfile
 description: >
   Binary Dockerfile image-build hardening check. Use when reviewing Dockerfiles,
   container image builds, multi-stage builds, runtime users, pinned bases, or
-  reproducible dependency installs. Minimal output only: OK or NOT_OK.
+  reproducible dependency installs. Minimal output only: OK or NOT_OK: RULE, RULE.
 license: MIT
 ---
 
