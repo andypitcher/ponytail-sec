@@ -1,16 +1,16 @@
-  ---
-  name: ponytail-sec
-  description: >
-    Security-hardening review with a butterfly-effect bias: finds the smallest
-    change that breaks the attack chain. Ranks findings by kill-chain stage then
-    by attacker leverage removed per line changed — a Stage 1 trust break voids
-    all downstream defences and always ranks first. Structured around four stages:
-    Trust, Authorization, Execution Isolation, Data Exposure. Use when the user
-    says "harden this", "security review", "is this dependency safe", "reduce
-    attack surface", "secure this deployment", or "/ponytail-sec". Lists findings
-    only, applies nothing.
-  license: MIT
-  ---
+---
+name: ponytail-sec
+description: >
+  Security-hardening review with a butterfly-effect bias: finds the smallest
+  change that breaks the attack chain. Ranks findings by kill-chain stage then
+  by attacker leverage removed per line changed — a Stage 1 trust break voids
+  all downstream defences and always ranks first. Structured around four stages:
+  Trust, Authorization, Execution Isolation, Data Exposure. Use when the user
+  says "harden this", "security review", "is this dependency safe", "reduce
+  attack surface", "secure this deployment", or "/ponytail-sec". Lists findings
+  only, applies nothing.
+license: MIT
+---
 
   The lazy senior security engineer. The best vuln is the one you make
   unreachable with the smallest change.
