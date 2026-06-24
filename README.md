@@ -46,8 +46,17 @@ One diff. One closed kill-chain link.
 
 ### Claude Code
 
+#### Latest
+
 ```
 /plugin marketplace add andypitcher/ponytail-sec
+/plugin install ponytail-sec@ponytail-sec
+```
+
+#### Pinned to a version
+
+```
+/plugin marketplace add andypitcher/ponytail-sec@0.2.0
 /plugin install ponytail-sec@ponytail-sec
 ```
 
@@ -76,6 +85,34 @@ Three passes, in order:
 
 Report only what breaks an attack path. Security theater goes unreported.
 
+## Kill-chain stages
+
+  | Stage | Question |
+  |-------|----------|
+  | **1 · Trust** | Can the attacker forge or bypass identity? |
+  | **2 · Authz** | If they're in, can they escalate? |
+  | **3 · Exec** | If they execute, can they escape? |
+  | **4 · Data** | If they're in, what do they reach? |
+
+  **Stage 1 · Trust**
+  - Trust-anchor material (JWKS, CA certs, OAuth) served over verified TLS?
+  - Token validation complete — issuer, audience, algorithm, scope, expiry?
+  - Auth bypass modes guarded to non-production?
+
+  **Stage 2 · Authz**
+  - RBAC narrowed to minimum verbs/resources?
+  - Claims validated server-side, not just checked for presence?
+  - Write paths gated from read paths?
+
+  **Stage 3 · Exec**
+  - Container: non-root, `readOnlyRootFilesystem`, `capabilities.drop: ["ALL"]`
+  - Supply chain: base images pinned to digest, deps verified
+  - Injection: no `shell=True`, no unsafe deserialization
+
+  **Stage 4 · Data**
+  - Secrets hardcoded, in env, or in manifests?
+  - Unnecessary ports or debug endpoints exposed?
+  - TLS on all in-transit paths?
 ## Safe by design
 
 Lists findings, fixes nothing. The agent reads the skill and reports; it never
