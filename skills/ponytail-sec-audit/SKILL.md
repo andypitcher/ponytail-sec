@@ -47,9 +47,11 @@ license: MIT
 
   - Does stdlib or the platform already do this? → **remove**.
   - Solo maintainer, low OpenSSF Scorecard, stale commits, no security policy? → **fork or vendor** and flag the risk.
-  - Brings more than it costs, healthy upstream? → **keep, pin to digest**.
+  - Brings more than it costs, healthy upstream? → **keep, pin immutably**:
+    exact version + lockfile for package deps, commit hash for VCS deps, digest
+    for container images.
 
-  Prefer: remove > stdlib > vendor/fork > pin > keep.
+  Prefer: remove > stdlib > vendor/fork > immutable pin > keep floating.
 
   ### Pass 3 — Hardening
 

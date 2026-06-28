@@ -13,13 +13,14 @@ a sandboxed expression language evaluator for the Angular frontend.
 
 ### Pass 2 · Dependencies
 
-`flexpr ^2.3.0` → **vendor or fork**: solo maintainer, last release 2020,
-last commit April 2021, no `SECURITY.md`, OpenSSF Maintained score 0/10.
-Functionally stable with no known CVEs, but any future vulnerability has
-nowhere to go — the author has been silent for 5 years with no co-maintainers.
-The active drop-in alternative is `flexpr-extended` (maintained superset with
-TypeScript types); switch to that or vendor the current source at the locked
-commit so you control patch response.
+`flexpr ^2.3.0`
+
+- **Verdict** — **vendor or fork**.
+- **Maintainer** — solo individual, no co-maintainers found.
+- **Freshness** — last release 2020; last meaningful commit April 2021.
+- **Security posture** — no `SECURITY.md`; no known CVEs, but no clear patch-response path.
+- **OpenSSF Scorecard** — Maintained score 0/10.
+- **Action** — switch to `flexpr-extended` or vendor the locked source so you control patch response.
 
 ### Pass 3 · Hardening
 

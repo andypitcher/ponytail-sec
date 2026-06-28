@@ -3,8 +3,9 @@ name: ponytail-sec
 description: >
   Security companion for active development. Scopes to the current diff or
   changed files. Three passes: YAGNI code review, new-dep assessment, and
-  top-3 hardening findings. Lean by design — surfaces the one thing to fix
-  before merging, not a backlog. Use ponytail-sec-audit for a full project scan.
+  up to 3 material hardening findings. Lean by design — surfaces the one thing
+  to fix before merging, not a backlog. Use ponytail-sec-audit for a full
+  project scan.
 license: MIT
 ---
 
@@ -47,9 +48,11 @@ license: MIT
 
   - Does stdlib or the platform already do this? → **remove**.
   - Solo maintainer, low OpenSSF Scorecard, or stale? → **fork or vendor** and flag the risk.
-  - Brings more than it costs, healthy upstream? → **keep, pin to digest**.
+  - Brings more than it costs, healthy upstream? → **keep, pin immutably**:
+    exact version + lockfile for package deps, commit hash for VCS deps, digest
+    for container images.
 
-  Prefer: remove > stdlib > vendor/fork > pin > keep.
+  Prefer: remove > stdlib > vendor/fork > immutable pin > keep floating.
 
   ### Pass 3 — Hardening
 
@@ -66,26 +69,43 @@ license: MIT
   ## Output format
 
   Emit three sections. Show prose, not tables, for Passes 1 and 2.
-  **Hard cap: top 3 findings total across all passes, ranked by stage then leverage.**
+  **Hard cap: up to the top 3 material findings total across all passes, ranked by
+  kill-chain stage then attacker leverage. Do not pad to 3 — if only one finding
+  matters, output one. If more than 3 material findings exist, show the top 3 and
+  say how many were withheld; ask whether to expand.**
 
   ---
 
   ### Pass 1 · Code
 
-  One paragraph per changed file. Finding or `Clean.`
+  Report only changed files with security-relevant code-removal findings. Do not
+  emit per-file `Clean.` lines unless the entire pass is clean.
   State the security consequence, not just the smell.
 
   Example:
   > `auth.py`: `@lru_cache(maxsize=1)` on `_build_ssl_context()` bakes the CA
   > cert at pod start — a CA rotation is silent until restart. Remove it.
   >
-  > `oauth.go`: `x509.SystemCertPool()` + fallback is idiomatic and needed. **Clean.**
+  > No removable security-relevant code in the changed files. **Clean.**
 
   ---
 
   ### Pass 2 · Dependencies
 
-  One sentence if clean. One line per new dep if not.
+  One sentence if clean.
+
+  For each risky new dependency, emit one compact evidence block:
+
+  - **Verdict** — remove / stdlib / vendor or fork / keep with immutable pin.
+  - **Maintainer** — individual, company, foundation, or active org.
+  - **Freshness** — last release date and last meaningful commit/activity.
+  - **Security posture** — `SECURITY.md`, advisories, known CVEs if relevant.
+  - **OpenSSF Scorecard** — maintained score and any standout risk signals.
+  - **Action** — exact replacement, vendoring/forking plan, or immutable pinning:
+    exact version + lockfile for package deps, commit hash for VCS deps, digest
+    for container images.
+
+  Keep the block short. No dependency essays in companion mode.
 
   Example:
   > No new dependencies introduced. **Clean.**
@@ -101,6 +121,9 @@ license: MIT
   | #3 | 3 · Exec  | `auth.py:55` | `expose` k8s secret load failure logged as `warning` when `INSECURE_SKIP_TLS=false` — severity undersells impact | Raise to `logging.error` |
 
   `kill-chain: 3 paths found.`
+
+  If additional material findings were withheld because of the top-3 cap, add:
+  `N more material findings withheld. Type 'show all' to expand.`
 
   Close with 2–3 sentences in reviewer voice: what to fix before merging,
   what is pre-existing and can be tracked separately.

@@ -72,13 +72,13 @@ Three passes, in order:
                     a. Does stdlib or the platform already do this?  → remove the dep
                     b. Is it maintained by a single person, or has a
                        low OpenSSF Scorecard / no recent commits?    → fork or vendor
-                    c. Does it bring more than it costs?             → keep, pin to digest
-                  Prefer: remove > stdlib > vendor > pin > keep.
+                    c. Does it bring more than it costs?             → keep, pin immutably
+                  Prefer: remove > stdlib > vendor > immutable pin > keep floating.
 
 3. Hardening      Four stages, top-to-bottom. Stage 1 break voids all below.
                   Rank within each stage by attacker leverage removed ÷ lines changed.
                   The smallest change that ruins an attacker's day wins.
-                  Default output: top finding only. Expand on request.
+                  Default output: up to 3 material findings total; no padding. More only on request.
 ```
 
 Report only what breaks an attack path. Security theater goes unreported.
@@ -115,9 +115,10 @@ applies changes, runs untrusted code, or touches production.
 ## Usage
 
 **`/ponytail-sec`** — The security engineer sitting next to you while you
-code. Scopes to your current diff. Three passes, top 3 findings, lean output.
-Ends with Ship or Ship blocked — nothing in between. Invoke directly or say
-"harden this", "security review", "is this dep safe", "reduce attack surface".
+code. Scopes to your current diff. Three passes, up to 3 material findings,
+lean output. Ends with Ship or Ship blocked — nothing in between. Invoke
+directly or say "harden this", "security review", "is this dep safe",
+"reduce attack surface".
 
 **`/ponytail-sec-audit`** — Full project scan. All findings, CVSS 4.0 scored,
 with blast-radius narrative and a frank "if I were you" prioritisation that
