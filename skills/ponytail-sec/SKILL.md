@@ -1,149 +1,133 @@
 ---
 name: ponytail-sec
 description: >
-  Security-hardening review with a butterfly-effect bias: finds the smallest
-  change that breaks the attack chain. Ranks findings by kill-chain stage then
-  by attacker leverage removed per line changed — a Stage 1 trust break voids
-  all downstream defences and always ranks first. Structured around four stages:
-  Trust, Authorization, Execution Isolation, Data Exposure. Use when the user
-  says "harden this", "security review", "is this dependency safe", "reduce
-  attack surface", "secure this deployment", or "/ponytail-sec". Lists findings
-  only, applies nothing.
+  Security companion for active development. Scopes to the current diff or
+  changed files. Three passes: YAGNI code review, new-dep assessment, and
+  top-3 hardening findings. Lean by design — surfaces the one thing to fix
+  before merging, not a backlog. Use ponytail-sec-audit for a full project scan.
 license: MIT
 ---
 
   The lazy senior security engineer. The best vuln is the one you make
   unreachable with the smallest change.
 
+  ## Scope
+
+  Changed files and new code only — the current diff or the files explicitly
+  named by the user. Do not scan the whole project. If no diff is available,
+  ask the user which files are in scope before proceeding.
+
+  ## Ranking model
+
+  Fix lower layers first. A network control does not excuse skipping a code fix.
+
+  ```
+  Layer 4 · Code       verify=False, InsecureSkipVerify          ← must-fix
+  Layer 3 · Auth       OAuth 2.1, JWT audience / issuer / alg    ← must-fix
+  Layer 2 · Transport  TLS with verified CA                       ← must-fix
+  Layer 1 · Network    NetworkPolicy (default-deny)               ← should-do
+  Layer 0 · Mesh       Istio mTLS                                 ← additive only
+  ```
+
   ## Three passes, in order
 
   ### Pass 1 — Code review
 
-  Apply the ponytail lens first. Does this code need to exist? YAGNI, stdlib
-  first, remove over refactor. Fewer lines = smaller attack surface. Dead code
-  and unrequested abstractions are security debt.
+  Does this new code need to exist? YAGNI, stdlib first, remove over refactor.
+  Fewer lines = smaller attack surface. Dead code and unrequested abstractions
+  are security debt. Scope to changed files only.
 
   ### Pass 2 — Dependency assessment
 
-  Every dependency is supply-chain surface. For each dep in scope:
+  New deps introduced in this diff only — any language (npm, PyPI, Maven, Cargo,
+  Go modules, etc.). For each, web-search the registry page and OpenSSF Scorecard
+  before judging — do not assess from name alone. Check: last release date,
+  number of contributors, individual vs. company/org maintainer, presence of
+  SECURITY.md, and OpenSSF Scorecard maintained score.
 
-  - Does stdlib or the platform already do this? → **remove the dep**.
-  - Is it maintained by a solo individual, has a low OpenSSF Scorecard, stale
-    commits, or no published security policy? → **fork or vendor** (flag the
-    risk signal).
-  - Does it bring more than it costs and has a healthy upstream? → **keep, pin
-    to digest or semver**.
+  - Does stdlib or the platform already do this? → **remove**.
+  - Solo maintainer, low OpenSSF Scorecard, or stale? → **fork or vendor** and flag the risk.
+  - Brings more than it costs, healthy upstream? → **keep, pin to digest**.
 
   Prefer: remove > stdlib > vendor/fork > pin > keep.
 
   ### Pass 3 — Hardening
 
-  Work through the four kill-chain stages **in order**. A Stage 1 break voids
-  all downstream defences — it always ranks first regardless of lines changed.
-  Within a stage, rank by **attacker leverage removed ÷ lines changed**.
+  Kill-chain stages in order. A Stage 1 break voids all downstream defences.
+  Rank within a stage by attacker leverage removed ÷ lines changed.
 
-  #### Stage 1 — Trust Establishment *(can the attacker forge or bypass identity?)*
+  - Stage 1 · Trust: TLS cert bypass, token validation gaps, auth bypass modes.
+  - Stage 2 · Authz: RBAC wildcards, server-side claim validation, write/read separation.
+  - Stage 3 · Exec: container escape surface, supply chain, shell injection, deserialization.
+  - Stage 4 · Data: hardcoded secrets, debug endpoints, missing TLS, verbose logging.
 
-  This is the highest-leverage stage. A failure here makes every downstream
-  control irrelevant.
-
-  - **Trust-anchor integrity:** Are JWKS endpoints, CA certificates, OAuth
-    metadata, and any other cryptographic key material fetched over verified TLS?
-    `InsecureSkipVerify` (or equivalent) on a trust-establishing connection means
-    an attacker who can MITM that fetch substitutes their own keys and signs
-    arbitrary tokens — the entire auth layer is void. The fix is always to load
-    the internal CA cert, never to skip verification.
-  - **Token validation completeness:** Does JWT/token validation enforce issuer,
-    **audience**, algorithm allowlist, scope, and expiry? Missing any one field
-    lets a valid token for a different service or purpose be accepted here.
-  - **Bypass paths:** Are there modes (`--insecure`, `debug=true`, empty config)
-    that skip auth entirely? Are they guarded to non-production?
-
-  #### Stage 2 — Authorization *(if they're authenticated, can they escalate?)*
-
-  - RBAC narrowed to minimum verbs and resources? No wildcards, no cluster-admin
-    bindings that are not strictly required.
-  - Claims and scopes validated server-side — presence is not sufficient, value
-    must be checked.
-  - Write paths gated separately from read paths?
-
-  #### Stage 3 — Execution Isolation *(if they can execute, can they escape?)*
-
-  - Container: `runAsNonRoot`, `readOnlyRootFilesystem`, `capabilities.drop: [ALL]`,
-    `allowPrivilegeEscalation: false`, `seccompProfile: RuntimeDefault`.
-  - Supply chain: base images pinned to digest (semver is not sufficient — a tag
-    can be repointed). Dependencies hash-locked.
-  - Injection: no `shell=True`, no unsafe deserialization, no unvalidated external
-    input reaching a controller or exec path.
-
-  #### Stage 4 — Data Exposure *(if they're in, what do they reach?)*
-
-  - Secrets hardcoded, in env vars, or in manifests rather than a secrets manager?
-  - Unnecessary network exposure: open ports, debug endpoints, privileged ports?
-  - TLS missing or weak on in-transit paths between services?
-
-  ## Tags
-
-  - `auth:` trust establishment or token validation failure (Stage 1).
-  - `rbac:` over-broad permission — `verbs: ["*"]`, wildcard resources, cluster-admin (Stage 2).
-  - `isolate:` container escape surface — securityContext, capability, readOnlyRootFilesystem (Stage 3).
-  - `dep:` unneeded or unverified dependency (Stage 3).
-  - `inject:` shell-exec, unsafe deserialization, unvalidated input reaching exec path (Stage 3).
-  - `secret:` hardcoded secret, token in env/manifest (Stage 4).
-  - `expose:` unnecessary port, `:latest` image, debug endpoint (Stage 4).
+  Tags: `auth` `rbac` `isolate` `dep` `inject` `secret` `expose`
 
   ## Output format
 
-  **Default: show only the top finding** — the highest stage with the best leverage/lines ratio.
+  Emit three sections. Show prose, not tables, for Passes 1 and 2.
+  **Hard cap: top 3 findings total across all passes, ranked by stage then leverage.**
 
-  ┌───────────┬─────────────┬──────────────────────────────────────────────────────────┬───────────────────────┐
-  │   Stage   │  Location   │                         Finding                          │          Fix          │
-  ├───────────┼─────────────┼──────────────────────────────────────────────────────────┼───────────────────────┤
-  │ 1 · Trust │ oauth.go:84 │ auth InsecureSkipVerify on JWKS fetch — full auth bypass │ load internal CA cert │
-  └───────────┴─────────────┴──────────────────────────────────────────────────────────┴───────────────────────┘
+  ---
 
-  `kill-chain: N paths found. Show all? (yes / no)`
+  ### Pass 1 · Code
 
-  **If no:** stop. The top finding is the deliverable.
+  One paragraph per changed file. Finding or `Clean.`
+  State the security consequence, not just the smell.
 
-  **If yes:** emit the full table, all findings in stage order:
+  Example:
+  > `auth.py`: `@lru_cache(maxsize=1)` on `_build_ssl_context()` bakes the CA
+  > cert at pod start — a CA rotation is silent until restart. Remove it.
+  >
+  > `oauth.go`: `x509.SystemCertPool()` + fallback is idiomatic and needed. **Clean.**
 
-  ┌───────────┬──────────────┬─────────────────────────────────────────┬────────────────────────────┐
-  │   Stage   │   Location   │                 Finding                 │            Fix             │
-  ├───────────┼──────────────┼─────────────────────────────────────────┼────────────────────────────┤
-  │ 1 · Trust │ oauth.go:84  │ auth InsecureSkipVerify on JWKS fetch   │ load internal CA cert      │
-  ├───────────┼──────────────┼─────────────────────────────────────────┼────────────────────────────┤
-  │ 1 · Trust │ oauth.go:159 │ auth missing WithAudience()             │ add jwt.WithAudience(url)  │
-  ├───────────┼──────────────┼─────────────────────────────────────────┼────────────────────────────┤
-  │ 3 · Exec  │ Dockerfile:1 │ expose base image semver not digest     │ pin to @sha256:<digest>    │
-  ├───────────┼──────────────┼─────────────────────────────────────────┼────────────────────────────┤
-  │ 3 · Exec  │ oauth.go:194 │ inject unchecked scope.(string) — panic │ add ok check, return false │
-  ├───────────┼──────────────┼─────────────────────────────────────────┼────────────────────────────┤
-  │ 4 · Data  │ utils.go:472 │ expose http.DefaultClient no timeout    │ http.Client{Timeout: 30s}  │
-  └───────────┴──────────────┴─────────────────────────────────────────┴────────────────────────────┘
+  ---
 
-  `kill-chain: N paths closed by M-line changes.`
+  ### Pass 2 · Dependencies
 
-  Then ask once: **Apply fixes? (yes / no)**
+  One sentence if clean. One line per new dep if not.
 
-  **If no:** stop.
+  Example:
+  > No new dependencies introduced. **Clean.**
 
-  **If yes:** for each finding, web-search the authoritative source, cite it,
-  and emit the minimal diff. Do not apply it.
+  ---
 
-  - `auth` → OAuth 2.0 Security BCP (RFC 9700), JWT RFC 7519, or library security docs.
-  - `rbac` / `isolate` / `expose` → `kubernetes.io/docs` or CIS Benchmark.
-  - `inject` → OWASP CWE page (e.g. CWE-78 shell injection, CWE-502 deserialization).
-  - `dep` → OpenSSF Scorecard, GitHub Security Advisories, or stdlib docs.
-  - `secret` → platform secrets-management docs.
+  ### Pass 3 · Hardening
 
-  Append `[ref: <url>]` to each fix line.
+  | #  | Stage     | Location | Finding | Fix |
+  |----|-----------|----------|---------|-----|
+  | #1 | 1 · Trust | `auth.py:23` | `auth` `@lru_cache` bakes CA cert — secret rotation silent until restart | Remove `@lru_cache`; matches PR #253 |
+  | #2 | 1 · Trust | `oauth.go:154` | `auth` `validateJWT` enforces issuer + scope but not audience — token for a different resource accepted | Add `jwt.WithAudience(c.ResourceURL)` |
+  | #3 | 3 · Exec  | `auth.py:55` | `expose` k8s secret load failure logged as `warning` when `INSECURE_SKIP_TLS=false` — severity undersells impact | Raise to `logging.error` |
+
+  `kill-chain: 3 paths found.`
+
+  Close with 2–3 sentences in reviewer voice: what to fix before merging,
+  what is pre-existing and can be tracked separately.
+
+  `Type 'expand N' for root cause, exploit scenario, and fix.`
+
+  Example:
+  > `#1` directly contradicts PR #253 and the CA-rotation concern is real — fix
+  > before merging. `#2` is pre-existing in `oauth.go` (not introduced here) but
+  > worth calling out. `#3` is a one-liner.
+  >
+  > Type 'expand N' for root cause, exploit scenario, and fix.
+
+  **expand N** emits:
+  - **Root cause** — 1 sentence.
+  - **Exploit scenario** — 1 sentence: what the attacker does and what they gain.
+  - **Fix** — invoke ponytail on the affected file/snippet for the minimal diff.
+    Do not write the fix inline; delegate to ponytail.
+
+  Closing verdict — one of two, no middle ground:
+  - Any Pass 2 verdict is remove/vendor/fork, OR any Pass 3 finding is Stage 1:
+    `Ship blocked on [dep|hardening]. Fix before merging.`
+  - All passes clean: `Locked down. Ship.`
 
   ## Boundaries
 
-  Security findings only. Correctness bugs and pure over-engineering go to
-  ponytail-review, not this pass. Lists findings, applies nothing. Never
-  instructs the agent to run untrusted code, exfiltrate data, or auto-apply
-  destructive changes.
+  Security findings only. Correctness bugs go to ponytail, not here.
+  Lists findings, applies nothing. For a full project audit use ponytail-sec-audit.
 
   "stop ponytail-sec" or "normal mode": revert to standard review.
