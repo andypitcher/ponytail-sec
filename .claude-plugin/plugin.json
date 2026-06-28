@@ -1,7 +1,7 @@
 {
   "name": "ponytail-sec",
-  "version": "0.2.0",
-  "description": "Security-hardening review. Finds the one dropped capability, the one readOnlyRootFilesystem, the one narrowed RBAC verb that kills a link in the attack chain.",
+  "version": "0.2.1",
+  "description": "Ponytail security companion and audit: diff-scoped hardening for active development, plus full-project security scans.",
   "author": {
     "name": "Andy Pitcher",
     "url": "https://github.com/andypitcher"
