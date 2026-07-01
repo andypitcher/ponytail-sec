@@ -114,11 +114,19 @@ license: MIT
 
   ### Pass 3 · Hardening
 
-  | #  | Stage     | Location | Finding | Fix |
-  |----|-----------|----------|---------|-----|
-  | #1 | 1 · Trust | `auth.py:23` | `auth` `@lru_cache` bakes CA cert — secret rotation silent until restart | Remove `@lru_cache`; matches PR #253 |
-  | #2 | 1 · Trust | `oauth.go:154` | `auth` `validateJWT` enforces issuer + scope but not audience — token for a different resource accepted | Add `jwt.WithAudience(c.ResourceURL)` |
-  | #3 | 3 · Exec  | `auth.py:55` | `expose` k8s secret load failure logged as `warning` when `INSECURE_SKIP_TLS=false` — severity undersells impact | Raise to `logging.error` |
+  | #  | Stage     | Location | Finding | Fix | Break-risk |
+  |----|-----------|----------|---------|-----|-----------|
+  | #1 | 1 · Trust | `auth.py:23` | `auth` `@lru_cache` bakes CA cert — secret rotation silent until restart | Remove `@lru_cache`; matches PR #253 | Low |
+  | #2 | 1 · Trust | `oauth.go:154` | `auth` `validateJWT` enforces issuer + scope but not audience — token for a different resource accepted | Add `jwt.WithAudience(c.ResourceURL)` | Med |
+  | #3 | 2 · Authz | `rbac.yaml:30` | `rbac` worker SA granted `secrets: ["*"]`; no handler in the diff reads Secrets | Drop the grant | High |
+
+  Break-risk = confidence the fix could break functionality, based on what static
+  analysis can verify — **not** severity:
+  - **Low** — additive, or provably-unused removal (nothing references it). Apply freely.
+  - **Med** — tightening that may reject real inputs/flows the diff doesn't show.
+  - **High** — removing/narrowing a grant or capability whose consumers can live
+    outside the diff (RBAC, shared service accounts, host mounts). Static review is
+    blind here. Med/High findings carry the ⚠️ validate-at-runtime line below.
 
   `kill-chain: 3 paths found.`
 
@@ -147,6 +155,55 @@ license: MIT
   - Any Pass 2 verdict is remove/vendor/fork, OR any Pass 3 finding is Stage 1:
     `Ship blocked on [dep|hardening]. Fix before merging.`
   - All passes clean: `Locked down. Ship.`
+
+  ## Validation caveat — attach to removal/tightening findings
+
+  Findings come from reading the diff statically. "Unused", "unreachable", and
+  "safe to remove" are hypotheses about runtime behaviour, not facts. RBAC grants,
+  capabilities, and permissions are frequently consumed by machinery the code never
+  names — install hooks, sidecars, worker pods an operator spawns, init containers,
+  CI jobs, service accounts borrowed by other components. Static review cannot see
+  those code paths, so a grant that looks dead may be load-bearing at runtime.
+
+  So every **Med/High break-risk** finding (any removal/tightening of a
+  permission/grant/capability an out-of-band component might rely on) gets this line
+  appended; skip it for Low-risk findings that only add a control:
+
+  > ⚠️ Static analysis only — validate at runtime. Apply the fix and run it (build +
+  > deploy + exercise the real path) before trusting it; removal findings can be
+  > wrong. If you have Claude Code with cluster/build access, run the fix there to
+  > confirm before merging.
+
+  This is not hypothetical. In one run, two "unused, safe to remove" RBAC findings
+  were both **bugs**: a namespace `secrets` grant and a `serviceaccounts` grant that
+  no handler in the diff touched. One was used at runtime by a worker component the
+  controller spawns out-of-band; the other by a chart install hook. Both broke the
+  product on deploy, and only a live run surfaced it — the static read looked clean.
+
+  If a runtime test shows the fix breaks something, don't just restore the broad
+  grant — that throws away the security win. Ask ponytail-sec, in the same session,
+  for a safer angle that keeps the functionality: e.g. the component really does
+  need a Secret, but mounting it as a file, scoping the grant to one resource name,
+  or a short-lived/projected token may deliver it with far less standing privilege.
+  e2e and tests in general are how you find this — they're your best friend here.
+
+  Stay humble. When there's no clearly correct call, recommend the most secure
+  option but present it as a choice, not a mandate — and give a risk-based read on
+  keeping the current implementation so the user can decide:
+
+  > Most secure is X. If you keep your current Y, the exposure is Z — acceptable if
+  > [condition holds]. Your call; want me to apply X or leave Y as-is?
+
+  Never pretend a judgement call is a hard rule.
+
+  Worked example (High break-risk removal finding with the caveat attached):
+  > `#3` Stage 2 · Authz — `deploy/rbac.yaml`: the worker ServiceAccount is granted
+  > `secrets: ["*"]`, but nothing in the changed handlers reads Secrets — drop it.
+  > **Break-risk: High.**
+  > ⚠️ Static analysis only — validate at runtime. A component spawned out-of-band
+  > (job/sidecar/hook) may rely on this grant; deploy and run one full cycle before
+  > merging. If it breaks, ask for a narrower grant (scope to one secret name,
+  > create-only, or a projected token) rather than restoring `["*"]`.
 
   ## Boundaries
 

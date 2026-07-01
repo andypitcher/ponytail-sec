@@ -112,6 +112,10 @@ Stage 4 · Data       If they're in, what do they reach?
 Lists findings, fixes nothing. The agent reads the skill and reports; it never
 applies changes, runs untrusted code, or touches production.
 
+⚠️ Findings are static reads of the diff. When one isn't fully validated — especially "drop this unused grant" — the agent tells you to prove it at runtime first: build → run → confirm it still works.
+
+ponytail-sec optimises for lean + least-privilege, so a finding can occasionally break something. When it does, don't just restore the broad grant — ask ponytail-sec for a safer angle (mount the Secret as a file, scope it to one name, a short-lived token) that keeps the feature. e2e is your friend.
+
 ## Usage
 
 **`/ponytail-sec`** — The security engineer sitting next to you while you
