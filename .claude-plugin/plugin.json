@@ -1,6 +1,6 @@
 {
   "name": "ponytail-sec",
-  "version": "0.2.1",
+  "version": "0.2.2-rc1",
   "description": "Ponytail security companion and audit: diff-scoped hardening for active development, plus full-project security scans.",
   "author": {
     "name": "Andy Pitcher",
