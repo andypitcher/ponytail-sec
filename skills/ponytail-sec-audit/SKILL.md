@@ -113,7 +113,7 @@ license: MIT
   | #3 | High (7.4)     | 2 · Authz | `rbac.yaml:30` | `rbac` operator SA granted `secrets: ["*"]`; no code path reads Secrets | Drop the grant | High |
 
   Severity = impact if exploited. **Break-risk** is orthogonal: confidence the
-  *fix* could break functionality, based on what static review can verify —
+  *fix* could break functionality, based on what static review can verify:
   - **Low** — additive, or provably-unused removal (nothing references it). Apply freely.
   - **Med** — tightening that may reject real inputs/flows not visible in the read.
   - **High** — removing/narrowing a grant or capability whose consumers can live
@@ -166,7 +166,7 @@ license: MIT
   remove" are hypotheses about runtime behaviour, not facts — and an audit spans
   subsystems the reviewer has little runtime context for, so the blind spot is
   wider than in a per-diff review. RBAC grants, capabilities, and permissions are
-  frequently consumed by machinery no source file names: install hooks, sidecars,
+  frequently consumed by machinery that no source file names: install hooks, sidecars,
   worker pods an operator spawns, init containers, CI jobs, service accounts
   borrowed by other components. A grant that looks dead may be load-bearing.
 
