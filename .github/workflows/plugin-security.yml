@@ -1,0 +1,54 @@
+name: Plugin security
+
+on:
+  push:
+    branches: [ "main" ]
+  workflow_dispatch:
+
+# Declare default permissions as read only.
+permissions: read-all
+
+jobs:
+  plugin-validate:
+    name: Claude plugin validate
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: "Checkout code"
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+
+      - name: "Install pinned Claude Code binary"
+        env:
+          CLAUDE_VERSION: "2.1.199"
+          CLAUDE_PLATFORM: linux-x64
+          CLAUDE_RELEASES: https://downloads.claude.ai/claude-code-releases
+          CLAUDE_KEY_FINGERPRINT: "31DD DE24 DDFA B679 F42D  7BD2 BAA9 29FF 1A7E CACE"
+        run: |
+          set -euo pipefail
+
+          curl -fsSL https://downloads.claude.ai/keys/claude-code.asc -o claude-code.asc
+          gpg --import claude-code.asc
+          gpg --fingerprint security@anthropic.com | grep -F "$CLAUDE_KEY_FINGERPRINT"
+
+          curl -fsSLO "$CLAUDE_RELEASES/$CLAUDE_VERSION/manifest.json"
+          curl -fsSLO "$CLAUDE_RELEASES/$CLAUDE_VERSION/manifest.json.sig"
+          gpg --verify manifest.json.sig manifest.json
+
+          curl -fsSL "$CLAUDE_RELEASES/$CLAUDE_VERSION/$CLAUDE_PLATFORM/claude" -o claude
+
+          expected_checksum="$(jq -r --arg platform "$CLAUDE_PLATFORM" '.platforms[$platform].checksum // empty' manifest.json)"
+          test -n "$expected_checksum"
+
+          actual_checksum="$(sha256sum claude | awk '{print $1}')"
+          test "$actual_checksum" = "$expected_checksum"
+
+          chmod +x claude
+          sudo install -m 0755 claude /usr/local/bin/claude
+
+      - name: "Validate Claude plugin"
+        env:
+          DISABLE_AUTOUPDATER: "1"
+        run: claude plugin validate . --strict

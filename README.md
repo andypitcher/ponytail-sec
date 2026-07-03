@@ -8,12 +8,21 @@
   <em>The smallest change that ruins an attacker's day.</em>
 </p>
 
+<p align="center">
+  <a href="https://securityscorecards.dev/viewer/?uri=github.com/andypitcher/ponytail-sec">
+    <img src="https://api.securityscorecards.dev/projects/github.com/andypitcher/ponytail-sec/badge" alt="OpenSSF Scorecard">
+  </a>
+</p>
+
 ---
 
 ponytail's security sibling. Instead of flooding you with findings, it hunts
 the one dropped capability, the one `readOnlyRootFilesystem: true`, the one
 narrowed RBAC verb that kills a link in the attack chain. Butterfly effect
 for defense: tiny diffs, outsized reduction in attacker leverage.
+
+A Claude Code plugin for focused security review: `/ponytail-sec` for your
+current diff, `/ponytail-sec-audit` for the whole repo.
 
 Same dependency lens as [ponytail](https://github.com/DietrichGebert/ponytail):
 "Do I actually need this dep?" Fewer dependencies = smaller supply-chain
@@ -22,20 +31,24 @@ attack surface. Prefer remove over keep.
 ## Before / After
 
 ```yaml
-# before — process runs as root, can write anywhere, trivial container escape
+# before — process runs as root, can write anywhere, keeps default capabilities
 containers:
   - name: controller
     image: ghcr.io/example/controller:latest
 ```
 
 ```yaml
-# after — 4 lines close the container-escape path
+# after — pin the image, remove root, confine runtime behavior
 containers:
   - name: controller
-    image: ghcr.io/example/controller:v1.2.3
+    image: ghcr.io/example/controller:v1.2.3@sha256:3b7c4e9a1f2d8c6b5a0e9d4c3b2a1908f7e6d5c4b3a2918070605040302010aa
     securityContext:
       runAsNonRoot: true
       readOnlyRootFilesystem: true
+      seccompProfile:
+        type: RuntimeDefault
+      seLinuxOptions:
+        type: container_t
       capabilities:
         drop: ["ALL"]
 ```
@@ -54,7 +67,7 @@ Latest:
 
 Pinned to a version:
 ```
-/plugin marketplace add andypitcher/ponytail-sec@0.2.1
+/plugin marketplace add andypitcher/ponytail-sec@0.2.2
 /plugin install ponytail-sec@ponytail-sec
 ```
 
