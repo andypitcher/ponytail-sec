@@ -4,12 +4,29 @@ description: >
   Full project security audit. Scans the entire codebase across three passes:
   code that shouldn't exist, all dependencies assessed, all hardening findings.
   Produces a comprehensive numbered report with blast-radius narrative.
+  Persists findings to .ponytail-sec/ for cross-scan tracking.
   For per-diff review use ponytail-sec instead.
 license: MIT
 ---
 
   The lazy senior security engineer. The best vuln is the one you make
   unreachable with the smallest change.
+
+  ## Existing Findings
+
+  - Previous audit reports: !`find .ponytail-sec -maxdepth 1 -type d -name "audit-*" 2>/dev/null`
+
+  When previous reports exist, read the most recent `findings.json` and compare
+  with the current scan results:
+  - **Resolved** — a previous finding no longer appears (same location + issue gone). Mark it ✅.
+  - **Recurring** — same location and same issue still present. Mark it 🔁.
+  - **Regression** — a new finding in a location that was previously clean. Mark it 🔴.
+
+  Open the report with a delta summary line when a previous scan exists:
+
+  > **Delta since last audit (`audit-<previous-timestamp>`):** X resolved, Y recurring, Z new.
+
+  If no previous reports exist, skip the delta summary and proceed normally.
 
   ## Scope
 
@@ -159,6 +176,67 @@ license: MIT
   - **Exploit scenario** — 1 sentence: what the attacker does and what they gain.
   - **Fix** — invoke ponytail on the affected file/snippet for the minimal diff.
     Do not write the fix inline; delegate to ponytail.
+
+  ## Persistence — save findings to disk
+
+  After emitting the report to the user, persist the results so future scans
+  can compare. Follow these steps exactly:
+
+  1. Capture the timestamp (use the same value throughout):
+     ```
+     SCAN_TS=$(date -u +%Y%m%d-%H%M%S)
+     ```
+
+  2. Create the output directory:
+     ```
+     mkdir -p .ponytail-sec/audit-${SCAN_TS}
+     ```
+
+  3. Write `.ponytail-sec/audit-${SCAN_TS}/report.md` — the full audit output
+     (all three passes, exactly as emitted to the user).
+
+  4. Write `.ponytail-sec/audit-${SCAN_TS}/findings.json` — a JSON array of
+     every Pass 3 finding. Schema:
+     ```json
+     [
+       {
+         "id": "#1",
+         "severity": "Critical (9.3)",
+         "stage": "1 · Trust",
+         "location": "ClientSslConfig.scala:43",
+         "tags": ["auth"],
+         "finding": "DummyTrustManager — checkServerTrusted() no-op",
+         "fix": "Load CA cert into real TrustManagerFactory",
+         "break_risk": "Low",
+         "status": "open"
+       }
+     ]
+     ```
+     - `status` is always `"open"` for new findings.
+     - Use only the fields shown. Do not add extra keys.
+     - Validate: the file must be valid JSON (no trailing commas, no comments).
+
+  5. Write `.ponytail-sec/audit-${SCAN_TS}/meta.json`:
+     ```json
+     {
+       "timestamp": "2026-08-24T15:30:00Z",
+       "commit": "<output of git rev-parse HEAD>",
+       "branch": "<output of git branch --show-current>",
+       "scope": "full-project",
+       "passes": ["code", "dependencies", "hardening"],
+       "finding_count": 5
+     }
+     ```
+     - `commit` and `branch` come from git commands, not hardcoded.
+     - `finding_count` is the length of the findings array.
+
+  6. Confirm to the user: "Findings saved to `.ponytail-sec/audit-<timestamp>/`."
+
+  Security notes for persistence:
+  - Never interpolate finding content into shell commands. Write files using the
+    tool's file-write capability, not `echo` or `cat <<EOF`.
+  - The `.ponytail-sec/` directory should be committed to the repository so
+    findings travel with the code. Recommend the user `git add .ponytail-sec/`.
 
   ## Validation caveat — attach to removal/tightening findings
 
