@@ -14,7 +14,7 @@ license: MIT
 
   ## Existing Findings
 
-  - Previous audit reports: !`find .ponytail-sec -maxdepth 1 -type d -name "audit-*" 2>/dev/null`
+  - Previous audit reports (newest first): !`find .ponytail-sec -maxdepth 1 -type d -name "audit-*" -print 2>/dev/null | sort -r`
 
   When previous reports exist, read the most recent `findings.json` and compare
   with the current scan results:
