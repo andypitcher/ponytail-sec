@@ -182,20 +182,21 @@ license: MIT
   After emitting the report to the user, persist the results so future scans
   can compare. Follow these steps exactly:
 
-  1. Capture the timestamp (use the same value throughout):
+  1. Capture the UTC timestamp (use the same value throughout):
      ```
      SCAN_TS=$(date -u +%Y%m%d-%H%M%S)
      ```
 
   2. Create the output directory:
      ```
-     mkdir -p .ponytail-sec/audit-${SCAN_TS}
+     mkdir -p .ponytail-sec
+     SCAN_DIR=$(mktemp -d .ponytail-sec/audit-${SCAN_TS}-XXXXXX)
      ```
 
-  3. Write `.ponytail-sec/audit-${SCAN_TS}/report.md` — the full audit output
+  3. Write `${SCAN_DIR}/report.md` — the full audit output
      (all three passes, exactly as emitted to the user).
 
-  4. Write `.ponytail-sec/audit-${SCAN_TS}/findings.json` — a JSON array of
+  4. Write `${SCAN_DIR}/findings.json` — a JSON array of
      every Pass 3 finding. Schema:
      ```json
      [
@@ -216,7 +217,7 @@ license: MIT
      - Use only the fields shown. Do not add extra keys.
      - Validate: the file must be valid JSON (no trailing commas, no comments).
 
-  5. Write `.ponytail-sec/audit-${SCAN_TS}/meta.json`:
+  5. Write `${SCAN_DIR}/meta.json`:
      ```json
      {
        "timestamp": "2026-08-24T15:30:00Z",
@@ -230,7 +231,7 @@ license: MIT
      - `commit` and `branch` come from git commands, not hardcoded.
      - `finding_count` is the length of the findings array.
 
-  6. Confirm to the user: "Findings saved to `.ponytail-sec/audit-<timestamp>/`."
+  6. Confirm to the user: "Findings saved to `${SCAN_DIR}`."
 
   Security notes for persistence:
   - Never interpolate finding content into shell commands. Write files using the
