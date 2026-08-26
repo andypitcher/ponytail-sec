@@ -22,7 +22,7 @@ jobs:
 
       - name: "Install pinned Claude Code binary"
         env:
-          CLAUDE_VERSION: "2.1.199"
+          CLAUDE_VERSION: "2.1.246"
           CLAUDE_PLATFORM: linux-x64
           CLAUDE_RELEASES: https://downloads.claude.ai/claude-code-releases
           CLAUDE_KEY_FINGERPRINT: "31DD DE24 DDFA B679 F42D  7BD2 BAA9 29FF 1A7E CACE"
