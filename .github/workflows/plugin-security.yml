@@ -55,7 +55,7 @@ jobs:
       
       - name: "Install Gemini CLI"
          env:
-            GEMINI_VERSION: "0.53.1"
+            GEMINI_VERSION: "v0.57.0"
          run: npm install -g @google/gemini-cli@$GEMINI_VERSION --ignore-scripts
 
       - name: "Link Gemini extension"
