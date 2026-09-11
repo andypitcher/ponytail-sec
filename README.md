@@ -100,7 +100,14 @@ Three passes, in order:
                     c. Does it bring more than it costs?             → keep, pin immutably
                   Prefer: remove > stdlib > vendor > immutable pin > keep floating.
 
-3. Hardening      Four stages, top-to-bottom. Stage 1 break voids all below.
+3. Security       Four stages, top-to-bottom. Stage 1 break voids all below.
+   findings       Three kinds, same table, ranked together:
+                    · kind: vulnerability — an exploitable weakness in code you
+                      own: privesc, auth bypass, injection, path traversal.
+                    · kind: hardening — a control missing or too loose (ungated
+                      debug endpoint, RBAC wildcard, missing TLS). Nothing is
+                      broken; you'd rather it did less.
+                    · kind: secret — credential material where it shouldn't be.
                   Rank within each stage by attacker leverage removed ÷ lines changed.
                   The smallest change that ruins an attacker's day wins.
                   Default output: up to 3 material findings total; no padding. More only on request.
@@ -109,6 +116,10 @@ Three passes, in order:
 Report only what breaks an attack path. Security theater goes unreported.
 
 ## Kill-chain stages
+
+Every security finding lands in one stage, tagged `vulnerability`, `hardening`,
+or `secret`. The triage is practical, not forensic — it's there so you can sort
+"there's a way in" from "tighten this", not to be a taxonomy.
 
 ```
 Stage 1 · Trust      Can the attacker forge or bypass identity?
@@ -137,9 +148,9 @@ Stage 4 · Data       If they're in, what do they reach?
 Lists findings, fixes nothing. The agent reads the skill and reports; it never
 applies changes, runs untrusted code, or touches production.
 
-⚠️ Findings are static reads of the diff. When one isn't fully validated — especially "drop this unused grant" — the agent tells you to prove it at runtime first: build → run → confirm it still works.
+⚠️ Findings are static reads of the diff. When one isn't fully validated — especially "drop this unused grant" — the agent tells you to prove it at runtime first: build → run → confirm.
 
-ponytail-sec optimises for lean + least-privilege, so a finding can occasionally break something. When it does, don't just restore the broad grant — ask ponytail-sec for a safer angle (mount the Secret as a file, scope it to one name, a short-lived token) that keeps the feature. e2e is your friend.
+ponytail-sec optimises for lean + least-privilege, so a finding can occasionally break something. When it does, don't just restore the broad grant — ask ponytail-sec for a safer angle (mount the Secret as a file, scope the grant to one resource name, use a projected token) that keeps the functionality with far less standing privilege.
 
 ## Usage
 
