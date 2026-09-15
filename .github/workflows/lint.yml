@@ -14,12 +14,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v4.2.2
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v4.2.2
         with:
           persist-credentials: false
 
       - name: Set up Python
-        uses: actions/setup-python@0b93645e9fea7318ecaed2b359559ac225c90a2b  # v5.3.0
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97  # v7.0.0
         with:
           python-version: '3.12'
 
@@ -34,7 +34,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v4.2.2
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v4.2.2
         with:
           persist-credentials: false
 
@@ -47,3 +47,45 @@ jobs:
             # 'jq empty' parses the file to check for syntax errors without printing the output
             jq empty "$file"
           done
+
+      - name: Validate findings.json schema
+        run: |
+          set -euo pipefail
+          mapfile -t files < <(find .ponytail-sec -name findings.json 2>/dev/null || true)
+          if [ "${#files[@]}" -eq 0 ]; then
+            echo "No .ponytail-sec findings.json files found; skipping."
+            exit 0
+          fi
+          status=0
+          for file in "${files[@]}"; do
+            echo "Validating $file"
+            errors=$(jq -r '
+              [
+                (select(.schema_version != 2)
+                 | "schema_version must be 2"),
+                (["code", "dependency", "security"][] as $k
+                 | select((.findings | has($k)) | not)
+                 | "missing findings bucket: \($k)"),
+                (.findings.security // [] | .[]
+                 | select((.kind | IN("vulnerability", "hardening", "secret")) | not)
+                 | "\(.id): kind must be vulnerability, hardening, or secret"),
+                (.findings.security // [] | .[]
+                 | select((.cvss_score | type) != "number"
+                           or (.cvss_vector | type) != "string"
+                           or (.cvss_vector | startswith("CVSS:4.0/") | not))
+                  | "\(.id): cvss_score must be a number and cvss_vector must be a CVSS:4.0/ string"),
+                ((.findings.code // []) + (.findings.dependency // []) | .[]
+                 | select(has("cvss_score") or has("cvss_vector"))
+                 | "\(.id): CVSS fields are not allowed on code/dependency findings"),
+                ((.findings.code // []) + (.findings.dependency // [])
+                   + (.findings.security // []) | .[]
+                 | select(has("break_risk") | not)
+                 | "\(.id): missing break_risk")
+              ][]
+            ' "$file")
+            if [ -n "$errors" ]; then
+              echo "$errors" | sed 's/^/  ERROR: /'
+              status=1
+            fi
+          done
+          exit "$status"

@@ -3,7 +3,7 @@ name: ponytail-sec
 description: >
   Security companion for active development. Scopes to the current diff or
   changed files. Three passes: YAGNI code review, new-dep assessment, and
-  up to 3 material hardening findings. Lean by design — surfaces the one thing
+  up to 3 material security findings. Lean by design — surfaces the one thing
   to fix before merging, not a backlog. Use ponytail-sec-audit for a full
   project scan.
 license: MIT
@@ -30,6 +30,20 @@ license: MIT
   Layer 0 · Mesh       Istio mTLS                                 ← additive only
   ```
 
+  ## Break-risk — applies to all three passes
+
+  **Break-risk** is confidence the *fix* could break functionality, based on what
+  static analysis can verify — **not** severity. Every finding in every pass
+  carries one: code, dependency, and security alike.
+
+  - **Low** — additive, or provably-unused removal (nothing references it). Apply freely.
+  - **Med** — tightening that may reject real inputs/flows the diff doesn't show.
+  - **High** — removing/narrowing a grant, capability, or class whose consumers can
+    live outside the diff (RBAC, shared service accounts, host mounts, reflection).
+    Static review is blind here.
+
+  Med/High findings of **any type** carry the ⚠️ validate-at-runtime line below.
+
   ## Three passes, in order
 
   ### Pass 1 — Code review
@@ -54,7 +68,11 @@ license: MIT
 
   Prefer: remove > stdlib > vendor/fork > immutable pin > keep floating.
 
-  ### Pass 3 — Hardening
+  This pass judges supply-chain **health** — maintainer, freshness, whether the
+  dep should exist at all. Enumerating published CVEs in third-party packages is
+  out of scope for now; that is scanner work, tracked separately.
+
+  ### Pass 3 — Security findings
 
   Kill-chain stages in order. A Stage 1 break voids all downstream defences.
   Rank within a stage by attacker leverage removed ÷ lines changed.
@@ -66,6 +84,24 @@ license: MIT
 
   Tags: `auth` `rbac` `isolate` `dep` `inject` `secret` `expose`
 
+  Every security finding carries a **kind** — practical triage, so a reader can
+  sort "there's a way in" from "tighten this":
+
+  - `vulnerability` — an exploitable weakness in code this project owns: privesc,
+    auth bypass, injection, path traversal, unsafe deserialization.
+  - `hardening` — a control is missing or too loose. Nothing is broken; the fix
+    is a small diff.
+  - `secret` — hardcoded credential or token material.
+
+  **Published CVEs in third-party dependencies are out of scope.** Do not
+  enumerate advisories for packages the project consumes. Companion mode has
+  three slots — a stream of pre-scored advisories, each fixed by a version bump,
+  would bury the one small change that actually closes an attack path.
+
+  The exception: if code in the diff *misuses* a dependency in a way that creates
+  an exploitable path, that is a `vulnerability` at the call site — the fix is the
+  call, not the version.
+
   ## Output format
 
   Emit three sections. Show prose, not tables, for Passes 1 and 2.
@@ -74,17 +110,21 @@ license: MIT
   matters, output one. If more than 3 material findings exist, show the top 3 and
   say how many were withheld; ask whether to expand.**
 
+  IDs carry a type prefix: `C1` … for code, `D1` … for dependency, `S1` … for
+  security. Use the same IDs in `expand N`.
+
   ---
 
   ### Pass 1 · Code
 
   Report only changed files with security-relevant code-removal findings. Do not
   emit per-file `Clean.` lines unless the entire pass is clean.
-  State the security consequence, not just the smell.
+  State the security consequence, not just the smell. Give each a break-risk.
 
   Example:
-  > `auth.py`: `@lru_cache(maxsize=1)` on `_build_ssl_context()` bakes the CA
+  > `C1` `auth.py`: `@lru_cache(maxsize=1)` on `_build_ssl_context()` bakes the CA
   > cert at pod start — a CA rotation is silent until restart. Remove it.
+  > **Break-risk: Low.**
   >
   > No removable security-relevant code in the changed files. **Clean.**
 
@@ -97,13 +137,14 @@ license: MIT
   For each risky new dependency, emit one compact evidence block:
 
   - **Verdict** — remove / stdlib / vendor or fork / keep with immutable pin.
+  - **Upstream** — link to the exact pinned version, or to the latest version if
+    the dep is unpinned.
   - **Maintainer** — individual, company, foundation, or active org.
   - **Freshness** — last release date and last meaningful commit/activity.
-  - **Security posture** — `SECURITY.md`, advisories, known CVEs if relevant.
+  - **Security posture** — `SECURITY.md`, advisory handling, responsiveness.
   - **OpenSSF Scorecard** — maintained score and any standout risk signals.
-  - **Action** — exact replacement, vendoring/forking plan, or immutable pinning:
-    exact version + lockfile for package deps, commit hash for VCS deps, digest
-    for container images.
+  - **Action** — exact replacement, vendoring/forking plan, or immutable pinning.
+  - **Break-risk** — an immutable pin is Low; `remove`/`vendor` is Med or High.
 
   Keep the block short. No dependency essays in companion mode.
 
@@ -112,23 +153,18 @@ license: MIT
 
   ---
 
-  ### Pass 3 · Hardening
+  ### Pass 3 · Security findings
 
-  | #  | Stage     | Location | Finding | Fix | Break-risk |
-  |----|-----------|----------|---------|-----|-----------|
-  | #1 | 1 · Trust | `auth.py:23` | `auth` `@lru_cache` bakes CA cert — secret rotation silent until restart | Remove `@lru_cache`; matches PR #253 | Low |
-  | #2 | 1 · Trust | `oauth.go:154` | `auth` `validateJWT` enforces issuer + scope but not audience — token for a different resource accepted | Add `jwt.WithAudience(c.ResourceURL)` | Med |
-  | #3 | 2 · Authz | `rbac.yaml:30` | `rbac` worker SA granted `secrets: ["*"]`; no handler in the diff reads Secrets | Drop the grant | High |
-
-  Break-risk = confidence the fix could break functionality, based on what static
-  analysis can verify — **not** severity:
-  - **Low** — additive, or provably-unused removal (nothing references it). Apply freely.
-  - **Med** — tightening that may reject real inputs/flows the diff doesn't show.
-  - **High** — removing/narrowing a grant or capability whose consumers can live
-    outside the diff (RBAC, shared service accounts, host mounts). Static review is
-    blind here. Med/High findings carry the ⚠️ validate-at-runtime line below.
+  | #  | Kind          | Stage     | Location | Finding | Fix | Break-risk |
+  |----|---------------|-----------|----------|---------|-----|-----------|
+  | S1 | hardening     | 1 · Trust | `auth.py:23` | `auth` `@lru_cache` bakes CA cert — secret rotation silent until restart | Remove `@lru_cache`; matches PR #253 | Low |
+  | S2 | vulnerability | 1 · Trust | `oauth.go:154` | `auth` `validateJWT` enforces issuer + scope but not audience — a token minted for another resource is accepted | Add `jwt.WithAudience(c.ResourceURL)` | Med |
+  | S3 | vulnerability | 3 · Exec  | `unpack.js:12` | `inject` archive entry paths joined to the output dir without validation — traversal writes outside it | Reject entries containing `..` after normalisation | Low |
 
   `kill-chain: 3 paths found.`
+
+  Companion mode does not print CVSS scores or vectors — that is audit output.
+  Rank by stage then leverage, and let break-risk carry the caution signal.
 
   If additional material findings were withheld because of the top-3 cap, add:
   `N more material findings withheld. Type 'show all' to expand.`
@@ -139,9 +175,9 @@ license: MIT
   `Type 'expand N' for root cause, exploit scenario, and fix.`
 
   Example:
-  > `#1` directly contradicts PR #253 and the CA-rotation concern is real — fix
-  > before merging. `#2` is pre-existing in `oauth.go` (not introduced here) but
-  > worth calling out. `#3` is a one-liner.
+  > `S1` directly contradicts PR #253 and the CA-rotation concern is real — fix
+  > before merging. `S2` is pre-existing in `oauth.go` (not introduced here) but
+  > worth calling out. `S3` is a one-line guard.
   >
   > Type 'expand N' for root cause, exploit scenario, and fix.
 
@@ -153,21 +189,21 @@ license: MIT
 
   Closing verdict — one of two, no middle ground:
   - Any Pass 2 verdict is remove/vendor/fork, OR any Pass 3 finding is Stage 1:
-    `Ship blocked on [dep|hardening]. Fix before merging.`
+    `Ship blocked on [dep|security]. Fix before merging.`
   - All passes clean: `Locked down. Ship.`
 
   ## Validation caveat — attach to removal/tightening findings
 
   Findings come from reading the diff statically. "Unused", "unreachable", and
   "safe to remove" are hypotheses about runtime behaviour, not facts. RBAC grants,
-  capabilities, and permissions are frequently consumed by machinery the code never
-  names — install hooks, sidecars, worker pods an operator spawns, init containers,
-  CI jobs, service accounts borrowed by other components. Static review cannot see
-  those code paths, so a grant that looks dead may be load-bearing at runtime.
+  capabilities, permissions, and whole classes are frequently consumed by machinery
+  the code never names — install hooks, sidecars, worker pods an operator spawns,
+  init containers, CI jobs, reflection, service accounts borrowed by other
+  components. Static review cannot see those code paths, so a grant — or a class —
+  that looks dead may be load-bearing at runtime.
 
-  So every **Med/High break-risk** finding (any removal/tightening of a
-  permission/grant/capability an out-of-band component might rely on) gets this line
-  appended; skip it for Low-risk findings that only add a control:
+  So every **Med/High break-risk** finding, in **any** of the three passes, gets
+  this line appended; skip it for Low-risk findings that only add a control:
 
   > ⚠️ Static analysis only — validate at runtime. Apply the fix and run it (build +
   > deploy + exercise the real path) before trusting it; removal findings can be
@@ -197,7 +233,7 @@ license: MIT
   Never pretend a judgement call is a hard rule.
 
   Worked example (High break-risk removal finding with the caveat attached):
-  > `#3` Stage 2 · Authz — `deploy/rbac.yaml`: the worker ServiceAccount is granted
+  > `S3` Stage 2 · Authz — `deploy/rbac.yaml`: the worker ServiceAccount is granted
   > `secrets: ["*"]`, but nothing in the changed handlers reads Secrets — drop it.
   > **Break-risk: High.**
   > ⚠️ Static analysis only — validate at runtime. A component spawned out-of-band
@@ -209,5 +245,7 @@ license: MIT
 
   Security findings only. Correctness bugs go to ponytail, not here.
   Lists findings, applies nothing. For a full project audit use ponytail-sec-audit.
+  Companion mode persists nothing — `findings.json` is written by
+  ponytail-sec-audit only.
 
   "stop ponytail-sec" or "normal mode": revert to standard review.
