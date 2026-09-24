@@ -163,13 +163,15 @@ directly or say "harden this", "security review", "is this dep safe",
 Examples: [new service](https://github.com/andypitcher/ponytail-sec/blob/main/examples/companion-diagnostic-service.md) ·
 [dependency](https://github.com/andypitcher/ponytail-sec/blob/main/examples/companion-jexl-dep.md).
 
-**`/ponytail-sec-audit`** — Full project scan. All findings in one table, each
-measured by what it actually is: vulnerabilities carry a severity and a
-CVSS 4.0 base score (`CVSS 8.1 · High`), hardening items carry an
-efficacy — how much attacker leverage the fix removes, as a `High`/`Med`/`Low`
-judgement rather than a number — and a CWE (`Efficacy High · CWE-269`). No
-severity and no score on a hardening item, because a base score on a documented
-default is impact-dominated and misranks the table. Ends with a blast-radius
+**`/ponytail-sec-audit`** — Full project scan. All findings in one table with a
+`Class` column and a `Rating` column, each measured by what it actually is:
+vulnerabilities are `Vulnerability` (or `CVE`) and carry a severity and a
+CVSS 4.0 base score (`Severity: High (8.1)`); hardening items are `Hardening`
+and carry an efficacy — how much attacker leverage the fix removes, as a
+`High`/`Medium`/`Low` judgement rather than a number (`Efficacy: High`) — plus
+a CWE, shown as a badge in the finding cell. No severity and no score on a
+hardening item, because a base score on a documented default is
+impact-dominated and misranks the table. Ends with a blast-radius
 narrative and a frank "if I were you" prioritisation that may differ from the
 score order. Invoke directly or say "full security audit", "audit the project",
 "security scan".
