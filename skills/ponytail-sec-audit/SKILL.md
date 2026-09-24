@@ -25,6 +25,14 @@ license: MIT
   - **Recurring** — same bucket, same location, same issue still present. Mark it 🔁.
   - **Regression** — a new finding in a location that was previously clean. Mark it 🔴.
 
+  A recurring security finding **inherits the previous triage** — its `class`,
+  `cvss` and `status` carry forward rather than being re-derived. A finding
+  triaged down to hardening must not re-report as a scored vulnerability on the
+  next scan. Say so on the row's delta line when it happened:
+
+  > 🔁 recurring — triaged as hardening, CVSS-BTE 6.1 (E:U, MAV:A — private
+  > management network)
+
   Open the report with a delta summary line when a previous scan exists:
 
   > **Delta since last audit (`audit-<previous-timestamp>`):** X resolved, Y recurring, Z new.
@@ -103,17 +111,29 @@ license: MIT
 
   Tags: `auth` `rbac` `isolate` `dep` `inject` `secret` `expose`
 
-  Every security finding carries a **kind**. The triage is practical, not
+  Every security finding carries a **class**. The triage is practical, not
   forensic — it exists so a reader can sort "there's a way in" from
-  "tighten this":
+  "tighten this", and it decides what the `Sev` cell holds:
 
-  - `vulnerability` — an exploitable weakness in code this project owns:
-    privilege escalation, auth bypass, injection, path traversal, unsafe
-    deserialization. Something is broken and an attacker acts on it.
-  - `hardening` — a control is missing or too loose (ungated debug endpoint,
-    RBAC wildcard, missing TLS). Nothing is broken; you would rather it did
-    less. The fix is a small diff.
-  - `secret` — hardcoded credential or token material.
+  - `vulnerability` — behaviour contradicts the product's own documented
+    contract: privilege escalation, auth bypass, injection, path traversal,
+    unsafe deserialization, hardcoded credential material. Something is broken
+    and an attacker acts on it. **Carries a score and a vector.**
+  - `hardening` — behaviour matches the documented contract, but the permissive
+    option is the default, or a control is missing or too loose (ungated debug
+    endpoint, RBAC wildcard, missing TLS). Nothing is broken; you would rather
+    it did less. **Carries a CWE and a priority, no score** — CVSS 4.0 base is
+    impact-dominated and would misrank the row against real vulnerabilities.
+
+  Two things that look like findings and are not:
+
+  - A **documented trust-model decision** — an agent that must hold
+    cluster-admin to function, a controller that by design reads every
+    namespace. Name it in the blast-radius paragraph as the perimeter; do not
+    emit a row.
+  - **Correctness items** — stale comments, missing timeouts, absent test
+    coverage. Out of scope per Boundaries; they go to ponytail. Do not score
+    them, and do not emit a row.
 
   **Published CVEs in third-party dependencies are out of scope.** Do not
   enumerate advisories for packages this project consumes. That boundary is
@@ -182,34 +202,51 @@ license: MIT
 
   All findings, numbered (`S1`, `S2` …), stage order.
 
-  Severity is the CVSS 4.0 qualitative label (Critical / High / Medium / Low)
-  with numeric score in parentheses. Every security finding gets a score —
-  hardening gaps are scored on what an attacker gains if the gap is exploited in
-  combination with other weaknesses. No separate classification: the score is
-  the signal.
+  The `Sev` cell takes one of two forms, decided by the finding's class:
 
-  Compute the full CVSS 4.0 vector **now**, at table time, for every finding —
-  it must be persisted to `findings.json`, so it cannot be deferred to `expand N`.
+  - **Vulnerability** — `CVSS-B <score>`, e.g. `CVSS-B 9.3`. Label every score
+    with its FIRST nomenclature: `CVSS-B` = base only, `CVSS-BT` = +threat,
+    `CVSS-BE` = +environmental, `CVSS-BTE` = all three. The audit emits
+    `CVSS-B` (optionally `CVSS-BT`); it has no standing to assert environmental
+    metrics. The prefix puts the base-only caveat in the row, where it is read.
+  - **Hardening** — `Hardening · CWE-nnnn · <Low|Med|High>`, e.g.
+    `Hardening · CWE-1188 · Med`. No score. The CWE maps the finding to a
+    CIS / OWASP ASVS / STIG control, which is real work; on a scored
+    vulnerability it is ceremony, so it appears on hardening rows only.
 
-  | #  | Sev            | Kind          | Stage     | Location | Finding | Fix | Break-risk |
-  |----|----------------|---------------|-----------|----------|---------|-----|-----------|
-  | S1 | Critical (9.3) | vulnerability | 1 · Trust | `ClientSslConfig.scala:43` | `auth` `DummyTrustManager` — `checkServerTrusted()` no-op; all manager→controller HTTPS MITMable | Load CA cert into real `TrustManagerFactory` | Low |
-  | S2 | High (8.1)     | vulnerability | 3 · Exec  | `ProcessManager.scala:34` | `inject` actor message interpolated into `bash -i` — any sender achieves RCE | Replace with `ProcessBuilder`, no shell | Med |
-  | S3 | High (7.4)     | hardening     | 2 · Authz | `rbac.yaml:30` | `rbac` operator SA granted `secrets: ["*"]`; no code path reads Secrets | Drop the grant | High |
-  | S4 | Medium (6.5)   | secret        | 4 · Data  | `charts/values.yaml:12` | `secret` default Grafana admin password committed in chart values | Move to a Secret ref; fail closed if unset | Med |
+  Per FIRST: *"CVSS Base (CVSS-B) scores are designed to measure the severity of
+  a vulnerability and should not be used alone to assess risk."* A hardening
+  item is not a vulnerability, and a base score on one will be
+  impact-dominated — preconditions barely move the macrovector — so it would
+  outrank genuine breaks.
+
+  Compute the full CVSS 4.0 vector **now**, at table time, for every
+  vulnerability — it must be persisted to `findings.json`, so it cannot be
+  deferred to `expand N`. Set the vector to the *reasonable* worst case, which
+  FIRST defines as "the worst-case after any unreasonable high-impact
+  low-likelihood paths have been discounted" — discount those paths in the
+  vector rather than scoring `AC:L` and caveating in prose afterwards.
+
+  | #  | Sev            | Stage     | Location | Finding | Fix | Break-risk |
+  |----|----------------|-----------|----------|---------|-----|-----------|
+  | S1 | `CVSS-B 9.3` | 1 · Trust | `ClientSslConfig.scala:43` | `auth` `DummyTrustManager` — `checkServerTrusted()` no-op; all manager→controller HTTPS MITMable | Load CA cert into real `TrustManagerFactory` | Low |
+  | S2 | `CVSS-B 8.1` | 3 · Exec  | `ProcessManager.scala:34` | `inject` actor message interpolated into `bash -i` — any sender achieves RCE | Replace with `ProcessBuilder`, no shell | Med |
+  | S3 | `Hardening · CWE-1188 · Med` | 1 · Trust | `values.yaml:21` | `auth` permissive TLS trust mode is the shipped default; `strict` exists and is documented | Ship `strict` as the default | High |
+  | S4 | `Hardening · CWE-269 · High` | 2 · Authz | `rbac.yaml:30` | `rbac` operator SA granted `secrets: ["*"]`; no code path reads Secrets | Drop the grant | High |
 
   Emit the computed vectors immediately below the table, one per line — not as a
-  column, which would make the table unreadable:
+  column, which would make the table unreadable. Vulnerabilities only; a
+  hardening row has no vector:
 
   ```
   Vectors:
-    S1  CVSS:4.0/AV:N/AC:L/AT:N/PR:N/UI:N/VC:H/VI:H/VA:H/SC:H/SI:H/SA:H
-    S2  CVSS:4.0/AV:A/AC:L/AT:N/PR:L/UI:N/VC:H/VI:H/VA:H/SC:N/SI:N/SA:N
-    S3  CVSS:4.0/AV:N/AC:L/AT:N/PR:L/UI:N/VC:H/VI:H/VA:N/SC:N/SI:N/SA:N
-    S4  CVSS:4.0/AV:N/AC:L/AT:N/PR:N/UI:N/VC:H/VI:L/VA:N/SC:N/SI:N/SA:N
+    S1  CVSS-B 9.3 · CVSS:4.0/AV:N/AC:L/AT:N/PR:N/UI:N/VC:H/VI:H/VA:H/SC:H/SI:H/SA:H
+    S2  CVSS-B 8.1 · CVSS:4.0/AV:A/AC:L/AT:N/PR:L/UI:N/VC:H/VI:H/VA:H/SC:N/SI:N/SA:N
   ```
 
-  Severity = impact if exploited. Break-risk is orthogonal — see the section above.
+  A vulnerability's score = impact if exploited; a hardening priority = how
+  soon you would want the default changed. Break-risk is orthogonal to both —
+  see the section above.
 
   `kill-chain: N paths found.`
 
@@ -217,7 +254,9 @@ license: MIT
 
   **Paragraph 1 — blast radius.** 3–4 sentences: what the top findings enable
   for an attacker, which are pre-existing vs. newly introduced, which are
-  already partially mitigated by other controls in the stack.
+  already partially mitigated by other controls in the stack. Name any
+  documented trust-model decision here as the perimeter — it belongs in this
+  paragraph, not in the table.
 
   **Paragraph 2 — "if I were you".** A frank prioritisation that may differ
   from the CVSS ranking. A higher score does not automatically mean higher
@@ -233,19 +272,22 @@ license: MIT
   > `S1` is the critical path — a network-adjacent attacker who MITMs the
   > manager→controller link owns the entire cluster before auth is checked.
   > `S2` becomes exploitable from anywhere that can reach the actor, and lives
-  > in a class Pass 1 already recommends deleting outright. `S3` is scored High
-  > but has no day-to-day exploit path if your build network is isolated.
+  > in a class Pass 1 already recommends deleting outright. `S3` and `S4` are
+  > hardening: the permissive trust mode is documented and has a one-setting
+  > opt-out, and the operator SA's cluster-admin grant is the trust model this
+  > product ships with — that grant is the perimeter, not a finding.
   >
   > If I were you I'd start with `S1` and `S2` — deleting the actor closes `S2`
-  > and shrinks the surface `S4` sits on. `S3` is a sprint item not a hotfix;
+  > and shrinks the surface `S3` sits on. `S4` is a sprint item not a hotfix;
   > your build isolation is likely compensating.
   >
   > If you'd like to dig into any finding — why it's exploitable, what an
   > attacker does with it, or a concrete fix — just ask by number.
 
   When the user asks about a finding by number, emit:
-  - **Root cause** — 1 sentence. Append the CVSS 4.0 vector already computed for
-    the table on the same line; do not recompute it.
+  - **Root cause** — 1 sentence. Append the labelled CVSS 4.0 score and vector
+    already computed for the table on the same line; do not recompute it. For a
+    hardening finding there is no vector — append the CWE instead.
   - **Exploit scenario** — 1 sentence: what the attacker does and what they gain.
   - **Fix** — invoke ponytail on the affected file/snippet for the minimal diff.
     Do not write the fix inline; delegate to ponytail.
@@ -311,10 +353,11 @@ license: MIT
            {
              "id": "S1",
              "type": "security",
-             "kind": "hardening",
-             "severity": "Medium (4.6)",
-             "cvss_score": 4.6,
-             "cvss_vector": "CVSS:4.0/AV:L/AC:L/AT:N/PR:H/UI:N/VC:L/VI:N/VA:L/SC:N/SI:N/SA:N",
+             "class": "hardening",
+             "severity": "Hardening · CWE-1188 · Med",
+             "cwe": "CWE-1188",
+             "cvss": null,
+             "cvss_score": null,
              "stage": "4 · Data",
              "location": "internal/cmd/controller/root.go:147",
              "tags": ["expose"],
@@ -326,10 +369,11 @@ license: MIT
            {
              "id": "S2",
              "type": "security",
-             "kind": "vulnerability",
-             "severity": "High (8.1)",
+             "class": "vulnerability",
+             "severity": "CVSS-B 8.1",
+             "cwe": null,
+             "cvss": "CVSS-B 8.1 · CVSS:4.0/AV:A/AC:L/AT:N/PR:L/UI:N/VC:H/VI:H/VA:H/SC:N/SI:N/SA:N",
              "cvss_score": 8.1,
-             "cvss_vector": "CVSS:4.0/AV:A/AC:L/AT:N/PR:L/UI:N/VC:H/VI:H/VA:H/SC:N/SI:N/SA:N",
              "stage": "3 · Exec",
              "location": "internal/exec/manager.go:34",
              "tags": ["inject"],
@@ -342,21 +386,35 @@ license: MIT
        }
      }
      ```
-     - `status` is always `"open"` for new findings.
+     - `status` is one of `open`, `triaged`, `accepted-risk`, `resolved`. New
+       findings are `"open"`. A finding that recurs keeps the `class`, `cvss`
+       and `status` carried forward from the previous `findings.json` — a
+       triage decision must survive a re-scan, or every future audit re-reports
+       a downgraded finding at its original score.
      - IDs carry their type prefix (`C`/`D`/`S`) and match the report tables.
-     - `kind` is one of `vulnerability`, `hardening`, `secret`.
-     - `cvss_score` is a JSON **number**, not a string, and must agree with the
-       score in the `severity` label.
-     - `cvss_vector` is the full CVSS 4.0 vector string, prefixed `CVSS:4.0/`,
-       and is the same vector printed under the report table.
+     - `class` is `vulnerability` or `hardening`, and decides the rest:
+       a vulnerability carries `cvss`/`cvss_score` and `cwe: null`; a hardening
+       finding carries `cwe` and `cvss: null`, `cvss_score: null`.
+     - `severity` is the `Sev` cell verbatim — `"CVSS-B 8.1"` or
+       `"Hardening · CWE-1188 · Med"`.
+     - `cvss` is the labelled score and full vector, `"<nomenclature> <score> ·
+       CVSS:4.0/…"`. The audit emits `CVSS-B` (optionally `CVSS-BT`) for
+       vulnerabilities and `null` for hardening. Triage may later replace it
+       with a `CVSS-BTE` score, and must state in the finding which metrics
+       were modified and why — `MAV`, `CR`/`IR`/`AR` assert facts about a
+       deployment that a repository scan has no standing to set.
+     - `cvss_score` is a JSON **number** (or `null`) and must agree with the
+       score in `cvss`.
      - **CVSS fields apply to `security` findings only.** Never invent a
-       `cvss_score` or `cvss_vector` for a code or dependency finding — those
+       `cvss`, `cvss_score`, or `cwe` for a code or dependency finding — those
        carry `break_risk` (and, for deps, `verdict`) as their signal. A
        fabricated score is worse than no score.
      - `break_risk` is required on every finding of every type.
      - `upstream_url` points at the exact pinned version, or the latest version
        when the dep is unpinned.
      - Each bucket may be an empty array, but always emit all three keys.
+     - Extra keys are allowed where triage needs them (e.g. a note recording
+       why a score was modified); the keys above are the required floor.
      - Validate: the file must be valid JSON (no trailing commas, no comments).
 
   5. Compute the integrity digest of `findings.json`. Do this **after** the file
@@ -429,8 +487,9 @@ license: MIT
      ```
      - `commit` and `branch` come from git commands, not hardcoded.
      - `finding_count` counts each bucket; `total` is their sum.
-     - `max_cvss_score` is the highest `cvss_score` across security findings,
-       or `null` when there are none.
+     - `max_cvss_score` is the highest `cvss_score` across scored security
+       findings, or `null` when there are none — hardening findings are
+       unscored and never contribute.
      - `findings_sha256` is the digest from step 5 — lowercase hex, no filename suffix. During a subsequent scan, the system must read this digest and recompute the hash of the existing `findings.json` before proceeding to compare buckets. This explicit integrity check detects if a committed `findings.json` was hand-edited after the fact, and lets the delta comparison safely skip re-reading an unchanged file.
      - `usage.source` records provenance: `"ccusage"`, `"runtime"`, or
        `"unavailable"`. When unavailable, emit the block with every numeric

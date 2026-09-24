@@ -67,16 +67,26 @@ jobs:
                  | select((.findings | has($k)) | not)
                  | "missing findings bucket: \($k)"),
                 (.findings.security // [] | .[]
-                 | select((.kind | IN("vulnerability", "hardening", "secret")) | not)
-                 | "\(.id): kind must be vulnerability, hardening, or secret"),
+                 | select((.class | IN("vulnerability", "hardening")) | not)
+                 | "\(.id): class must be vulnerability or hardening"),
                 (.findings.security // [] | .[]
+                 | select(.class == "vulnerability")
                  | select((.cvss_score | type) != "number"
-                           or (.cvss_vector | type) != "string"
-                           or (.cvss_vector | startswith("CVSS:4.0/") | not))
-                  | "\(.id): cvss_score must be a number and cvss_vector must be a CVSS:4.0/ string"),
+                           or (.cvss | type) != "string"
+                           or (.cvss | test("CVSS:4.0/") | not))
+                  | "\(.id): a vulnerability needs a numeric cvss_score and a CVSS:4.0/ vector in cvss"),
+                (.findings.security // [] | .[]
+                 | select(.class == "hardening")
+                 | select(.cvss != null or .cvss_score != null
+                           or (.cwe | type) != "string"
+                           or (.cwe | startswith("CWE-") | not))
+                  | "\(.id): a hardening finding needs cvss and cvss_score null and a CWE- string"),
+                (.findings.security // [] | .[]
+                 | select((.status | IN("open", "triaged", "accepted-risk", "resolved")) | not)
+                 | "\(.id): status must be open, triaged, accepted-risk, or resolved"),
                 ((.findings.code // []) + (.findings.dependency // []) | .[]
-                 | select(has("cvss_score") or has("cvss_vector"))
-                 | "\(.id): CVSS fields are not allowed on code/dependency findings"),
+                 | select(has("cvss_score") or has("cvss") or has("cwe"))
+                 | "\(.id): CVSS/CWE fields are not allowed on code/dependency findings"),
                 ((.findings.code // []) + (.findings.dependency // [])
                    + (.findings.security // []) | .[]
                  | select(has("break_risk") | not)
