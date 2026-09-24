@@ -16,6 +16,5 @@
         "kubernetes",
         "rbac",
         "supply-chain"
-    ],
-    "contextFileName": "GEMINI.md"
+    ]
 }

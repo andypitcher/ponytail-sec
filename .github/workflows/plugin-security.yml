@@ -17,7 +17,7 @@ jobs:
       contents: read
     steps:
       - name: "Checkout code"
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
 
@@ -54,10 +54,8 @@ jobs:
           DISABLE_AUTOUPDATER: "1"
         run: claude plugin validate . --strict
 
-      - name: "Install Gemini CLI"
-        env:
-          GEMINI_VERSION: "v0.57.0"
-        run: npm install -g @google/gemini-cli@$GEMINI_VERSION --ignore-scripts
+      - name: "Install Antigravity CLI"
+        run: curl -fsSL https://antigravity.google/cli/install.sh | bash
 
-      - name: "Link Gemini extension"
-        run: gemini extensions link . --consent
+      - name: "Validate Antigravity plugin"
+        run: agy plugin validate .

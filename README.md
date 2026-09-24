@@ -71,16 +71,16 @@ Pinned to a version:
 /plugin install ponytail-sec@ponytail-sec
 ```
 
-### Gemini CLI
+### Antigravity CLI
 
 Latest:
 ```bash
-gemini extensions install https://github.com/andypitcher/ponytail-sec
+agy plugin install https://github.com/andypitcher/ponytail-sec
 ```
 
 For development/local testing:
 ```bash
-gemini extensions link .
+agy plugin install .
 ```
 
 ## How it works
