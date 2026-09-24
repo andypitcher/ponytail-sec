@@ -82,17 +82,18 @@ jobs:
                 (.findings.security // [] | .[]
                  | select(.class == "vulnerability")
                  | select(has("efficacy") or has("efficacy_score"))
-                 | "\(.id): efficacy fields are not allowed on a vulnerability"),
+                 | "\(.id): efficacy is not allowed on a vulnerability"),
                 (.findings.security // [] | .[]
                  | select(.class == "hardening")
-                 | select(((.efficacy | IN("Critical", "High", "Med", "Low")) | not)
-                           or (.efficacy_score | type) != "number"
-                           or (.efficacy_score < 0) or (.efficacy_score > 10))
-                  | "\(.id): a hardening finding needs an efficacy label and a 0-10 efficacy_score"),
+                 | select((.efficacy | IN("High", "Med", "Low")) | not)
+                 | "\(.id): a hardening finding needs efficacy High, Med, or Low"),
                 (.findings.security // [] | .[]
                  | select(.class == "hardening")
                  | select(has("severity") or has("cvss") or has("cvss_score"))
                  | "\(.id): severity/CVSS fields are not allowed on a hardening finding"),
+                (.findings.security // [] | .[]
+                 | select(has("efficacy_score"))
+                 | "\(.id): efficacy is categorical; efficacy_score is not part of the schema"),
                 (.findings.security // [] | .[]
                  | select(has("cwe") and ((.cwe | type) != "string"
                            or (.cwe | startswith("CWE-") | not)))

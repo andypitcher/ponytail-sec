@@ -163,12 +163,13 @@ directly or say "harden this", "security review", "is this dep safe",
 **`/ponytail-sec-audit`** — Full project scan. All findings in one table, each
 measured by what it actually is: vulnerabilities carry a severity and a
 labelled CVSS 4.0 base score (`CVSS-B 8.1 · High`), hardening items carry an
-efficacy — how much attacker leverage the fix removes — and a CWE
-(`Efficacy Med (6.2) · CWE-269`). No severity on a hardening item, because a
-base score on a documented default is impact-dominated and misranks the table.
-Ends with a blast-radius narrative and a frank "if I were you" prioritisation
-that may differ from the score order. Invoke directly or say "full security
-audit", "audit the project", "security scan".
+efficacy — how much attacker leverage the fix removes, as a `High`/`Med`/`Low`
+judgement rather than a number — and a CWE (`Efficacy High · CWE-269`). No
+severity and no score on a hardening item, because a base score on a documented
+default is impact-dominated and misranks the table. Ends with a blast-radius
+narrative and a frank "if I were you" prioritisation that may differ from the
+score order. Invoke directly or say "full security audit", "audit the project",
+"security scan".
 
 ## Relation
 
