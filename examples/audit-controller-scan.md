@@ -36,11 +36,11 @@ load the pool per-dial; the cost is negligible next to the TLS handshake.
 
 ### Pass 3 · Security findings
 
-| #  | Sev | Stage     | Location | Finding | Fix | Break-risk |
-|----|-----|-----------|----------|---------|-----|-----------|
-| S1 | `CVSS-B 8.1` | 3 · Exec  | `internal/exec/manager.go:34` | `inject` job name interpolated into a command string passed to `sh -c`; any caller controlling the name gets execution | Use `exec.Command` with an argument slice; drop the shell | Med |
-| S2 | `Hardening · CWE-269 · High` | 2 · Authz | `deploy/rbac.yaml:30` | `rbac` controller SA granted `secrets: ["*"]`; no handler reads Secrets | Drop the grant | High |
-| S3 | `Hardening · CWE-1188 · Med` | 4 · Data  | `internal/cmd/controller/root.go:147` | `expose` `net/http/pprof` on `localhost:6060` starts unconditionally, while the agent gates the identical block behind `FLEET_AGENT_PPROF_DISABLED` | Apply the same env gate the agent already uses | Low |
+| #  | Sev / Eff | Stage     | Location | Finding | Fix | Break-risk |
+|----|-----------|-----------|----------|---------|-----|-----------|
+| S1 | `CVSS-B 8.1 · High` | 3 · Exec  | `internal/exec/manager.go:34` | `inject` job name interpolated into a command string passed to `sh -c`; any caller controlling the name gets execution | Use `exec.Command` with an argument slice; drop the shell | Med |
+| S2 | `Efficacy Med (6.2) · CWE-269` | 2 · Authz | `deploy/rbac.yaml:30` | `rbac` controller SA granted `secrets: ["*"]`; no handler reads Secrets | Drop the grant | High |
+| S3 | `Efficacy Med (5.4) · CWE-1188` | 4 · Data  | `internal/cmd/controller/root.go:147` | `expose` `net/http/pprof` on `localhost:6060` starts unconditionally, while the agent gates the identical block behind `FLEET_AGENT_PPROF_DISABLED` | Apply the same env gate the agent already uses | Low |
 
 ```
 Vectors:
@@ -53,17 +53,18 @@ Vectors:
 reaching `sh -c` is execution in the controller's context, and the controller
 holds the very grant `S2` describes, so the two compound. `S2` and `S3` are both
 pre-existing hardening items, both 🔁 recurring from the last audit and neither
-scored: the RBAC grant and the pprof listener behave as documented, so a base
-score on them would be impact-dominated and would outrank `S1`. `S3` is
-interesting less for its priority than for the inconsistency: the agent already
-gates pprof, so the controller is the odd one out and the fix is a copy-paste of
-code you own. The controller's namespace-wide watch is the shipped trust model,
+carrying a severity: the RBAC grant and the pprof listener behave as documented,
+so a base score on them would be impact-dominated and would outrank `S1`. They
+carry an efficacy score instead — how much the fix takes away from an attacker.
+`S3` is interesting less for its efficacy than for the inconsistency: the agent
+already gates pprof, so the controller is the odd one out and the fix is a
+copy-paste of code you own. The controller's namespace-wide watch is the shipped trust model,
 not a finding — that watch is the perimeter.
 
 If I were you I'd start with `S1` and `S3` — `S1` because it's the one live
 execution path, `S3` because it's four lines you've already written elsewhere
-and it's been recurring for two scans. `S2` sits above `S3` in priority but is
-the one I'd move slowest on: High break-risk, and the last audit's RBAC removals
+and it's been recurring for two scans. `S2` scores marginally higher efficacy
+than `S3` but is the one I'd move slowest on: High break-risk, and the last audit's RBAC removals
 are exactly the kind that broke on deploy. Prove it with an e2e run first.
 
 ⚠️ Static analysis only — validate at runtime. A component spawned out-of-band
@@ -121,9 +122,8 @@ Findings saved to `.ponytail-sec/audit-20260911-143022-Xk9mQ2`.
         "id": "S1",
         "type": "security",
         "class": "vulnerability",
-        "severity": "CVSS-B 8.1",
-        "cwe": null,
-        "cvss": "CVSS-B 8.1 · CVSS:4.0/AV:A/AC:L/AT:N/PR:L/UI:N/VC:H/VI:H/VA:H/SC:N/SI:N/SA:N",
+        "severity": "High",
+        "cvss": "CVSS:4.0/AV:A/AC:L/AT:N/PR:L/UI:N/VC:H/VI:H/VA:H/SC:N/SI:N/SA:N",
         "cvss_score": 8.1,
         "stage": "3 · Exec",
         "location": "internal/exec/manager.go:34",
@@ -137,10 +137,9 @@ Findings saved to `.ponytail-sec/audit-20260911-143022-Xk9mQ2`.
         "id": "S2",
         "type": "security",
         "class": "hardening",
-        "severity": "Hardening · CWE-269 · High",
+        "efficacy": "Med",
+        "efficacy_score": 6.2,
         "cwe": "CWE-269",
-        "cvss": null,
-        "cvss_score": null,
         "stage": "2 · Authz",
         "location": "deploy/rbac.yaml:30",
         "tags": ["rbac"],
@@ -153,10 +152,9 @@ Findings saved to `.ponytail-sec/audit-20260911-143022-Xk9mQ2`.
         "id": "S3",
         "type": "security",
         "class": "hardening",
-        "severity": "Hardening · CWE-1188 · Med",
+        "efficacy": "Med",
+        "efficacy_score": 5.4,
         "cwe": "CWE-1188",
-        "cvss": null,
-        "cvss_score": null,
         "stage": "4 · Data",
         "location": "internal/cmd/controller/root.go:147",
         "tags": ["expose"],

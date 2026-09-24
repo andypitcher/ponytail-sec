@@ -69,24 +69,41 @@ jobs:
                 (.findings.security // [] | .[]
                  | select((.class | IN("vulnerability", "hardening")) | not)
                  | "\(.id): class must be vulnerability or hardening"),
+                (.findings[][] as $f | $f | to_entries[]
+                 | select(.value == null)
+                 | "\($f.id): \(.key) is null; omit non-applicable keys entirely"),
                 (.findings.security // [] | .[]
                  | select(.class == "vulnerability")
                  | select((.cvss_score | type) != "number"
                            or (.cvss | type) != "string"
-                           or (.cvss | test("CVSS:4.0/") | not))
-                  | "\(.id): a vulnerability needs a numeric cvss_score and a CVSS:4.0/ vector in cvss"),
+                           or (.cvss | startswith("CVSS:4.0/") | not)
+                           or (.severity | type) != "string")
+                  | "\(.id): a vulnerability needs severity, a CVSS:4.0/ vector in cvss, and a numeric cvss_score"),
+                (.findings.security // [] | .[]
+                 | select(.class == "vulnerability")
+                 | select(has("efficacy") or has("efficacy_score"))
+                 | "\(.id): efficacy fields are not allowed on a vulnerability"),
                 (.findings.security // [] | .[]
                  | select(.class == "hardening")
-                 | select(.cvss != null or .cvss_score != null
-                           or (.cwe | type) != "string"
-                           or (.cwe | startswith("CWE-") | not))
-                  | "\(.id): a hardening finding needs cvss and cvss_score null and a CWE- string"),
+                 | select(((.efficacy | IN("Critical", "High", "Med", "Low")) | not)
+                           or (.efficacy_score | type) != "number"
+                           or (.efficacy_score < 0) or (.efficacy_score > 10))
+                  | "\(.id): a hardening finding needs an efficacy label and a 0-10 efficacy_score"),
+                (.findings.security // [] | .[]
+                 | select(.class == "hardening")
+                 | select(has("severity") or has("cvss") or has("cvss_score"))
+                 | "\(.id): severity/CVSS fields are not allowed on a hardening finding"),
+                (.findings.security // [] | .[]
+                 | select(has("cwe") and ((.cwe | type) != "string"
+                           or (.cwe | startswith("CWE-") | not)))
+                 | "\(.id): cwe must be a CWE- string when present"),
                 (.findings.security // [] | .[]
                  | select((.status | IN("open", "triaged", "accepted-risk", "resolved")) | not)
                  | "\(.id): status must be open, triaged, accepted-risk, or resolved"),
                 ((.findings.code // []) + (.findings.dependency // []) | .[]
-                 | select(has("cvss_score") or has("cvss") or has("cwe"))
-                 | "\(.id): CVSS/CWE fields are not allowed on code/dependency findings"),
+                 | select(has("cvss_score") or has("cvss") or has("severity")
+                           or has("efficacy") or has("efficacy_score") or has("cwe"))
+                 | "\(.id): severity/CVSS/efficacy/CWE fields are not allowed on code/dependency findings"),
                 ((.findings.code // []) + (.findings.dependency // [])
                    + (.findings.security // []) | .[]
                  | select(has("break_risk") | not)
