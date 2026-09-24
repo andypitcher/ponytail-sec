@@ -39,8 +39,8 @@ load the pool per-dial; the cost is negligible next to the TLS handshake.
 | #  | Sev / Eff | Stage     | Location | Finding | Fix | Break-risk |
 |----|-----------|-----------|----------|---------|-----|-----------|
 | S1 | `CVSS-B 8.1 · High` | 3 · Exec  | `internal/exec/manager.go:34` | `inject` job name interpolated into a command string passed to `sh -c`; any caller controlling the name gets execution | Use `exec.Command` with an argument slice; drop the shell | Med |
-| S2 | `Efficacy Med (6.2) · CWE-269` | 2 · Authz | `deploy/rbac.yaml:30` | `rbac` controller SA granted `secrets: ["*"]`; no handler reads Secrets | Drop the grant | High |
-| S3 | `Efficacy Med (5.4) · CWE-1188` | 4 · Data  | `internal/cmd/controller/root.go:147` | `expose` `net/http/pprof` on `localhost:6060` starts unconditionally, while the agent gates the identical block behind `FLEET_AGENT_PPROF_DISABLED` | Apply the same env gate the agent already uses | Low |
+| S2 | `Efficacy High · CWE-269` | 2 · Authz | `deploy/rbac.yaml:30` | `rbac` controller SA granted `secrets: ["*"]`; no handler reads Secrets | Drop the grant | High |
+| S3 | `Efficacy Med · CWE-1188` | 4 · Data  | `internal/cmd/controller/root.go:147` | `expose` `net/http/pprof` on `localhost:6060` starts unconditionally, while the agent gates the identical block behind `FLEET_AGENT_PPROF_DISABLED` | Apply the same env gate the agent already uses | Low |
 
 ```
 Vectors:
@@ -55,16 +55,19 @@ holds the very grant `S2` describes, so the two compound. `S2` and `S3` are both
 pre-existing hardening items, both 🔁 recurring from the last audit and neither
 carrying a severity: the RBAC grant and the pprof listener behave as documented,
 so a base score on them would be impact-dominated and would outrank `S1`. They
-carry an efficacy score instead — how much the fix takes away from an attacker.
-`S3` is interesting less for its efficacy than for the inconsistency: the agent
+carry an efficacy label instead — how much the fix takes away from an
+attacker, as a judgement rather than a number that would read as commensurable
+with `S1`'s. `S3` is interesting less for its efficacy than for the
+inconsistency: the agent
 already gates pprof, so the controller is the odd one out and the fix is a
 copy-paste of code you own. The controller's namespace-wide watch is the shipped trust model,
 not a finding — that watch is the perimeter.
 
 If I were you I'd start with `S1` and `S3` — `S1` because it's the one live
 execution path, `S3` because it's four lines you've already written elsewhere
-and it's been recurring for two scans. `S2` scores marginally higher efficacy
-than `S3` but is the one I'd move slowest on: High break-risk, and the last audit's RBAC removals
+and it's been recurring for two scans. `S2` is the higher-efficacy of the two —
+dropping the grant closes Stage 2 outright — but it's the one I'd move slowest
+on: High break-risk, and the last audit's RBAC removals
 are exactly the kind that broke on deploy. Prove it with an e2e run first.
 
 ⚠️ Static analysis only — validate at runtime. A component spawned out-of-band
@@ -137,8 +140,7 @@ Findings saved to `.ponytail-sec/audit-20260911-143022-Xk9mQ2`.
         "id": "S2",
         "type": "security",
         "class": "hardening",
-        "efficacy": "Med",
-        "efficacy_score": 6.2,
+        "efficacy": "High",
         "cwe": "CWE-269",
         "stage": "2 · Authz",
         "location": "deploy/rbac.yaml:30",
@@ -153,7 +155,6 @@ Findings saved to `.ponytail-sec/audit-20260911-143022-Xk9mQ2`.
         "type": "security",
         "class": "hardening",
         "efficacy": "Med",
-        "efficacy_score": 5.4,
         "cwe": "CWE-1188",
         "stage": "4 · Data",
         "location": "internal/cmd/controller/root.go:147",

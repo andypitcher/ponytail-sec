@@ -26,13 +26,13 @@ license: MIT
   - **Regression** — a new finding in a location that was previously clean. Mark it 🔴.
 
   A recurring security finding **inherits the previous triage** — its `class`,
-  its measurement set (`cvss`/`cvss_score` or `efficacy`/`efficacy_score`) and
+  its measurement set (`severity`/`cvss`/`cvss_score`, or `efficacy`) and
   its `status` carry forward rather than being re-derived. A finding triaged
   down to hardening must not re-report as a scored vulnerability on the next
   scan. Say so on the row's delta line when it happened:
 
-  > 🔁 recurring — triaged as hardening, Efficacy Med (6.1); the deployment's
-  > private management network closes the path the original score assumed
+  > 🔁 recurring — triaged as hardening, Efficacy Med; the deployment's private
+  > management network closes the path the original score assumed
 
   Open the report with a delta summary line when a previous scan exists:
 
@@ -125,8 +125,8 @@ license: MIT
   - `hardening` — **proactive.** Behaviour matches the documented contract, but
     the permissive option is the default, or a control is missing or too loose
     (ungated debug endpoint, RBAC wildcard, missing TLS). Nothing is broken;
-    you would rather it did less. **Carries `efficacy` and `efficacy_score`,
-    plus a `cwe`** — never a severity or a CVSS score, because CVSS 4.0 base is
+    you would rather it did less. **Carries a categorical `efficacy`, plus a
+    `cwe`** — never a severity or a CVSS score, because CVSS 4.0 base is
     impact-dominated and would misrank the row against real vulnerabilities.
     The useful question about a hardening item is not "how bad is this" but
     "how much does fixing it take away from an attacker" — that is efficacy.
@@ -218,12 +218,13 @@ license: MIT
     three. The audit emits `CVSS-B` (optionally `CVSS-BT`); it has no standing
     to assert environmental metrics. The prefix puts the base-only caveat in
     the row, where it is read.
-  - **Hardening → efficacy.** `Efficacy <label> (<score>) · CWE-nnnn`, e.g.
-    `Efficacy High (8.0) · CWE-1188`. Proactive: how much attacker leverage the
-    fix removes, which is the question a hardening item actually answers.
-    Never a severity, never a CVSS score. The CWE maps the finding to a
-    CIS / OWASP ASVS / STIG control, which is real work; on a scored
-    vulnerability it is ceremony, so it appears on hardening rows only.
+  - **Hardening → efficacy.** `Efficacy <label> · CWE-nnnn`, e.g.
+    `Efficacy High · CWE-1188`. Proactive: how much attacker leverage the fix
+    removes, which is the question a hardening item actually answers. A label
+    only — `High`, `Med`, or `Low` — never a severity, never a number. The CWE
+    maps the finding to a CIS / OWASP ASVS / STIG control, which is real work;
+    on a scored vulnerability it is ceremony, so it appears on hardening rows
+    only.
 
   Per FIRST: *"CVSS Base (CVSS-B) scores are designed to measure the severity of
   a vulnerability and should not be used alone to assess risk."* A hardening
@@ -231,15 +232,20 @@ license: MIT
   impact-dominated — preconditions barely move the macrovector — so it would
   outrank genuine breaks.
 
-  **Scoring efficacy.** `efficacy_score` is 0.0–10.0, one decimal, and answers
-  the ranking question this skill already uses: attacker leverage removed ÷
-  lines changed. High when a one-setting change closes a whole stage for every
-  deployment; low when the control is deep in defence-in-depth and the paths it
-  closes are already closed elsewhere. Bands match the CVSS qualitative scale so
-  the two columns read alike — `Low` 0.1–3.9, `Med` 4.0–6.9, `High` 7.0–8.9,
-  `Critical` 9.0–10.0 — and `efficacy` is that label. It is a judgement, not a
-  framework: say what drove it in `expand N`, and never present it as a CVSS
-  number.
+  **Judging efficacy.** Three values, and it answers the ranking question this
+  skill already uses — attacker leverage removed ÷ lines changed:
+
+  - `High` — a one-setting change closes a whole stage for every deployment.
+  - `Med` — closes a real path, but one that needs a precondition, or the fix
+    is more than a default flip.
+  - `Low` — defence-in-depth; the paths it closes are largely closed elsewhere.
+
+  **Categorical, deliberately.** There is no `efficacy_score` and must not be
+  one. A decimal next to a CVSS decimal reads as commensurable, and the whole
+  point of splitting the two is that they are not: one measures impact if
+  exploited, the other leverage removed by a fix. A number would also imply a
+  framework computed it, when this is a judgement — so say what drove the call
+  in `expand N`, in words.
 
   Compute the full CVSS 4.0 vector **now**, at table time, for every
   vulnerability — it must be persisted to `findings.json`, so it cannot be
@@ -252,8 +258,8 @@ license: MIT
   |----|----------------|-----------|----------|---------|-----|-----------|
   | S1 | `CVSS-B 9.3 · Critical` | 1 · Trust | `ClientSslConfig.scala:43` | `auth` `DummyTrustManager` — `checkServerTrusted()` no-op; all manager→controller HTTPS MITMable | Load CA cert into real `TrustManagerFactory` | Low |
   | S2 | `CVSS-B 8.1 · High` | 3 · Exec  | `ProcessManager.scala:34` | `inject` actor message interpolated into `bash -i` — any sender achieves RCE | Replace with `ProcessBuilder`, no shell | Med |
-  | S3 | `Efficacy High (8.0) · CWE-1188` | 1 · Trust | `values.yaml:21` | `auth` permissive TLS trust mode is the shipped default; `strict` exists and is documented | Ship `strict` as the default | High |
-  | S4 | `Efficacy Med (6.2) · CWE-269` | 2 · Authz | `rbac.yaml:30` | `rbac` operator SA granted `secrets: ["*"]`; no code path reads Secrets | Drop the grant | High |
+  | S3 | `Efficacy High · CWE-1188` | 1 · Trust | `values.yaml:21` | `auth` permissive TLS trust mode is the shipped default; `strict` exists and is documented | Ship `strict` as the default | High |
+  | S4 | `Efficacy Med · CWE-269` | 2 · Authz | `rbac.yaml:30` | `rbac` operator SA granted `secrets: ["*"]`; no code path reads Secrets | Drop the grant | High |
 
   Emit the computed vectors immediately below the table, one per line — not as a
   column, which would make the table unreadable. Vulnerabilities only; a
@@ -280,7 +286,7 @@ license: MIT
   paragraph, not in the table.
 
   **Paragraph 2 — "if I were you".** A frank prioritisation that may differ
-  from both the CVSS ranking and the efficacy ranking. A higher score does not
+  from both the CVSS ranking and the efficacy labels. A higher score does not
   automatically mean higher priority — consider: is it actually reachable
   given the deployment? Do
   existing controls (network policy, WAF, auth layer) reduce its practical
@@ -300,7 +306,7 @@ license: MIT
   > product ships with — that grant is the perimeter, not a finding.
   >
   > If I were you I'd start with `S1` and `S2` — deleting the actor closes `S2`
-  > and shrinks the surface `S3` sits on. `S3` scores High efficacy because one
+  > and shrinks the surface `S3` sits on. `S3` is High efficacy because one
   > chart default closes Stage 1 for every install. `S4` is a sprint item not a
   > hotfix; your build isolation is likely compensating.
   >
@@ -311,8 +317,8 @@ license: MIT
   - **Root cause** — 1 sentence. For a vulnerability, append the labelled
     CVSS 4.0 score and vector already computed for the table on the same line;
     do not recompute it. For a hardening finding there is no vector — append
-    the efficacy label, its score, and the CWE, and say in one clause what
-    drove the efficacy call.
+    the efficacy label and the CWE, and say in one clause what drove the
+    efficacy call — the label is a judgement, so it needs its reason.
   - **Exploit scenario** — 1 sentence: what the attacker does and what they
     gain. For a hardening finding, what the fix takes away from them instead.
   - **Fix** — invoke ponytail on the affected file/snippet for the minimal diff.
@@ -381,7 +387,6 @@ license: MIT
              "type": "security",
              "class": "hardening",
              "efficacy": "Med",
-             "efficacy_score": 5.4,
              "cwe": "CWE-1188",
              "stage": "4 · Data",
              "location": "internal/cmd/controller/root.go:147",
@@ -420,8 +425,8 @@ license: MIT
 
      | `class` | Required | Must not appear |
      |---|---|---|
-     | `vulnerability` | `severity`, `cvss`, `cvss_score` | `efficacy`, `efficacy_score` |
-     | `hardening` | `efficacy`, `efficacy_score` | `severity`, `cvss`, `cvss_score` |
+     | `vulnerability` | `severity`, `cvss`, `cvss_score` | `efficacy` |
+     | `hardening` | `efficacy` | `severity`, `cvss`, `cvss_score`, `efficacy_score` |
 
      - `status` is one of `open`, `triaged`, `accepted-risk`, `resolved`. New
        findings are `"open"`. A finding that recurs keeps its `class`, its
@@ -441,14 +446,15 @@ license: MIT
        `MAV`, `CR`/`IR`/`AR` assert facts about a deployment that a repository
        scan has no standing to set.
      - `cvss_score` is a JSON **number** and must agree with `cvss`.
-     - `efficacy` is `"Critical"`, `"High"`, `"Med"`, or `"Low"`, and
-       `efficacy_score` is a JSON **number** 0.0–10.0 in the matching band.
-       Hardening only. It measures leverage removed by the fix, not impact —
-       do not derive it from a CVSS calculation.
+     - `efficacy` is the string `"High"`, `"Med"`, or `"Low"` — hardening
+       only, and categorical by design. There is no `efficacy_score`: emitting
+       one invites a reader to rank it against `cvss_score`, which measures
+       something else. It records leverage removed by the fix, not impact, so
+       never derive it from a CVSS calculation.
      - `cwe` is optional and belongs on hardening findings, where it maps to a
        CIS / OWASP ASVS / STIG control. Omit it where it adds nothing.
      - **Measurement fields apply to `security` findings only.** Never invent a
-       `cvss`, `cvss_score`, `severity`, `efficacy`, `efficacy_score`, or `cwe`
+       `cvss`, `cvss_score`, `severity`, `efficacy`, or `cwe`
        for a code or dependency finding — those carry `break_risk` (and, for
        deps, `verdict`) as their signal. A fabricated score is worse than no
        score.
@@ -533,9 +539,8 @@ license: MIT
      - `commit` and `branch` come from git commands, not hardcoded.
      - `finding_count` counts each bucket; `total` is their sum.
      - `max_cvss_score` is the highest `cvss_score` across `vulnerability`
-       findings, or `null` when there are none — hardening findings carry an
-       efficacy score, which measures something else entirely and never
-       contributes here.
+       findings, or `null` when there are none — hardening findings are
+       unscored and never contribute.
      - `findings_sha256` is the digest from step 5 — lowercase hex, no filename suffix. During a subsequent scan, the system must read this digest and recompute the hash of the existing `findings.json` before proceeding to compare buckets. This explicit integrity check detects if a committed `findings.json` was hand-edited after the fact, and lets the delta comparison safely skip re-reading an unchanged file.
      - `usage.source` records provenance: `"ccusage"`, `"runtime"`, or
        `"unavailable"`. When unavailable, emit the block with every numeric
