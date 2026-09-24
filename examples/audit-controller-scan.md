@@ -38,13 +38,13 @@ load the pool per-dial; the cost is negligible next to the TLS handshake.
 
 | #  | Sev / Eff | Stage     | Location | Finding | Fix | Break-risk |
 |----|-----------|-----------|----------|---------|-----|-----------|
-| S1 | `CVSS-B 8.1 · High` | 3 · Exec  | `internal/exec/manager.go:34` | `inject` job name interpolated into a command string passed to `sh -c`; any caller controlling the name gets execution | Use `exec.Command` with an argument slice; drop the shell | Med |
+| S1 | `CVSS 8.1 · High` | 3 · Exec  | `internal/exec/manager.go:34` | `inject` job name interpolated into a command string passed to `sh -c`; any caller controlling the name gets execution | Use `exec.Command` with an argument slice; drop the shell | Med |
 | S2 | `Efficacy High · CWE-269` | 2 · Authz | `deploy/rbac.yaml:30` | `rbac` controller SA granted `secrets: ["*"]`; no handler reads Secrets | Drop the grant | High |
 | S3 | `Efficacy Med · CWE-1188` | 4 · Data  | `internal/cmd/controller/root.go:147` | `expose` `net/http/pprof` on `localhost:6060` starts unconditionally, while the agent gates the identical block behind `FLEET_AGENT_PPROF_DISABLED` | Apply the same env gate the agent already uses | Low |
 
 ```
 Vectors:
-  S1  CVSS-B 8.1 · CVSS:4.0/AV:A/AC:L/AT:N/PR:L/UI:N/VC:H/VI:H/VA:H/SC:N/SI:N/SA:N
+  S1  8.1  CVSS:4.0/AV:A/AC:L/AT:N/PR:L/UI:N/VC:H/VI:H/VA:H/SC:N/SI:N/SA:N
 ```
 
 `kill-chain: 3 paths found.`
@@ -61,7 +61,9 @@ with `S1`'s. `S3` is interesting less for its efficacy than for the
 inconsistency: the agent
 already gates pprof, so the controller is the odd one out and the fix is a
 copy-paste of code you own. The controller's namespace-wide watch is the shipped trust model,
-not a finding — that watch is the perimeter.
+not a finding — that watch is the perimeter. `S1`'s 8.1 is CVSS 4.0 base, so it
+assumes the worst case for everything the repo doesn't tell me about your
+deployment.
 
 If I were you I'd start with `S1` and `S3` — `S1` because it's the one live
 execution path, `S3` because it's four lines you've already written elsewhere

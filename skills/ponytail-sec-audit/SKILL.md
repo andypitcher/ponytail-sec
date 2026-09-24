@@ -211,13 +211,12 @@ license: MIT
   The `Sev / Eff` cell takes one of two forms, decided by the finding's class.
   The two measure different things and are never mixed in one cell:
 
-  - **Vulnerability → severity.** `CVSS-B <score> · <label>`, e.g.
-    `CVSS-B 9.3 · Critical`. Reactive: how bad it is that this is already
-    broken. Label every score with its FIRST nomenclature — `CVSS-B` = base
-    only, `CVSS-BT` = +threat, `CVSS-BE` = +environmental, `CVSS-BTE` = all
-    three. The audit emits `CVSS-B` (optionally `CVSS-BT`); it has no standing
-    to assert environmental metrics. The prefix puts the base-only caveat in
-    the row, where it is read.
+  - **Vulnerability → severity.** `CVSS <score> · <label>`, e.g.
+    `CVSS 9.3 · Critical`. Reactive: how bad it is that this is already broken.
+    The score is CVSS 4.0 base, and the row says `CVSS` — no nomenclature
+    suffix. The audit scores base metrics only, because threat and
+    environmental metrics assert facts about a deployment that a repository
+    scan has no standing to set.
   - **Hardening → efficacy.** `Efficacy <label> · CWE-nnnn`, e.g.
     `Efficacy High · CWE-1188`. Proactive: how much attacker leverage the fix
     removes, which is the question a hardening item actually answers. A label
@@ -226,11 +225,20 @@ license: MIT
     on a scored vulnerability it is ceremony, so it appears on hardening rows
     only.
 
-  Per FIRST: *"CVSS Base (CVSS-B) scores are designed to measure the severity of
-  a vulnerability and should not be used alone to assess risk."* A hardening
-  item is not a vulnerability, and a base score on one will be
-  impact-dominated — preconditions barely move the macrovector — so it would
-  outrank genuine breaks.
+  **Base metrics only, and say so once.** Per FIRST, *"CVSS Base (CVSS-B)
+  scores are designed to measure the severity of a vulnerability and should not
+  be used alone to assess risk"* — base values assume the worst case for
+  everything the audit cannot see. FIRST's `CVSS-B` / `CVSS-BT` / `CVSS-BTE`
+  nomenclature is not used in this report: every score here is base, so a
+  suffix on every row is noise that earns nothing. State the caveat once, in
+  the blast-radius paragraph, where a reader takes it in. If a deployer later
+  re-scores a finding with threat or environmental metrics, that is their
+  number to assert and it belongs in triage, not in the scan.
+
+  The same quote is why a hardening item carries no score at all: it is not a
+  vulnerability, and a base score on one will be impact-dominated —
+  preconditions barely move the macrovector — so it would outrank genuine
+  breaks.
 
   **Judging efficacy.** Three values, and it answers the ranking question this
   skill already uses — attacker leverage removed ÷ lines changed:
@@ -256,8 +264,8 @@ license: MIT
 
   | #  | Sev / Eff      | Stage     | Location | Finding | Fix | Break-risk |
   |----|----------------|-----------|----------|---------|-----|-----------|
-  | S1 | `CVSS-B 9.3 · Critical` | 1 · Trust | `ClientSslConfig.scala:43` | `auth` `DummyTrustManager` — `checkServerTrusted()` no-op; all manager→controller HTTPS MITMable | Load CA cert into real `TrustManagerFactory` | Low |
-  | S2 | `CVSS-B 8.1 · High` | 3 · Exec  | `ProcessManager.scala:34` | `inject` actor message interpolated into `bash -i` — any sender achieves RCE | Replace with `ProcessBuilder`, no shell | Med |
+  | S1 | `CVSS 9.3 · Critical` | 1 · Trust | `ClientSslConfig.scala:43` | `auth` `DummyTrustManager` — `checkServerTrusted()` no-op; all manager→controller HTTPS MITMable | Load CA cert into real `TrustManagerFactory` | Low |
+  | S2 | `CVSS 8.1 · High` | 3 · Exec  | `ProcessManager.scala:34` | `inject` actor message interpolated into `bash -i` — any sender achieves RCE | Replace with `ProcessBuilder`, no shell | Med |
   | S3 | `Efficacy High · CWE-1188` | 1 · Trust | `values.yaml:21` | `auth` permissive TLS trust mode is the shipped default; `strict` exists and is documented | Ship `strict` as the default | High |
   | S4 | `Efficacy Med · CWE-269` | 2 · Authz | `rbac.yaml:30` | `rbac` operator SA granted `secrets: ["*"]`; no code path reads Secrets | Drop the grant | High |
 
@@ -267,8 +275,8 @@ license: MIT
 
   ```
   Vectors:
-    S1  CVSS-B 9.3 · CVSS:4.0/AV:N/AC:L/AT:N/PR:N/UI:N/VC:H/VI:H/VA:H/SC:H/SI:H/SA:H
-    S2  CVSS-B 8.1 · CVSS:4.0/AV:A/AC:L/AT:N/PR:L/UI:N/VC:H/VI:H/VA:H/SC:N/SI:N/SA:N
+    S1  9.3  CVSS:4.0/AV:N/AC:L/AT:N/PR:N/UI:N/VC:H/VI:H/VA:H/SC:H/SI:H/SA:H
+    S2  8.1  CVSS:4.0/AV:A/AC:L/AT:N/PR:L/UI:N/VC:H/VI:H/VA:H/SC:N/SI:N/SA:N
   ```
 
   A vulnerability's severity = impact if exploited; a hardening item's efficacy
@@ -283,14 +291,17 @@ license: MIT
   for an attacker, which are pre-existing vs. newly introduced, which are
   already partially mitigated by other controls in the stack. Name any
   documented trust-model decision here as the perimeter — it belongs in this
-  paragraph, not in the table.
+  paragraph, not in the table. This is also where the base-only caveat goes:
+  one clause noting the scores are CVSS 4.0 base, so they assume the worst case
+  for the deployment specifics the scan cannot see.
 
   **Paragraph 2 — "if I were you".** A frank prioritisation that may differ
   from both the CVSS ranking and the efficacy labels. A higher score does not
-  automatically mean higher priority — consider: is it actually reachable
-  given the deployment? Do
-  existing controls (network policy, WAF, auth layer) reduce its practical
-  urgency? Does fixing one finding make another redundant? Name 2–3 specific
+  automatically mean higher priority — consider: is it actually reachable given
+  the deployment? Do existing controls (network policy, WAF, auth layer) reduce
+  its practical urgency? Does fixing one finding make another redundant? This
+  paragraph is where base-only scoring gets corrected in words, since the audit
+  does not assert threat or environmental metrics. Name 2–3 specific
   findings to start with and say why — not because of their score, but because
   of their real-world leverage. Be direct: "I'd start with `S1` because…"
 
@@ -303,7 +314,9 @@ license: MIT
   > in a class Pass 1 already recommends deleting outright. `S3` and `S4` are
   > hardening: the permissive trust mode is documented and has a one-setting
   > opt-out, and the operator SA's cluster-admin grant is the trust model this
-  > product ships with — that grant is the perimeter, not a finding.
+  > product ships with — that grant is the perimeter, not a finding. Both
+  > scores are CVSS 4.0 base, so they assume the worst case for the deployment
+  > details I can't see from the repo.
   >
   > If I were you I'd start with `S1` and `S2` — deleting the actor closes `S2`
   > and shrinks the surface `S3` sits on. `S3` is High efficacy because one
@@ -314,9 +327,9 @@ license: MIT
   > attacker does with it, or a concrete fix — just ask by number.
 
   When the user asks about a finding by number, emit:
-  - **Root cause** — 1 sentence. For a vulnerability, append the labelled
-    CVSS 4.0 score and vector already computed for the table on the same line;
-    do not recompute it. For a hardening finding there is no vector — append
+  - **Root cause** — 1 sentence. For a vulnerability, append the CVSS 4.0
+    score and vector already computed for the table on the same line; do not
+    recompute it. For a hardening finding there is no vector — append
     the efficacy label and the CWE, and say in one clause what drove the
     efficacy call — the label is a judgement, so it needs its reason.
   - **Exploit scenario** — 1 sentence: what the attacker does and what they
@@ -438,13 +451,12 @@ license: MIT
      - `severity` is the CVSS 4.0 qualitative label alone — `"Critical"`,
        `"High"`, `"Medium"`, `"Low"` — and must agree with `cvss_score`.
        Vulnerabilities only.
-     - `cvss` is the bare CVSS 4.0 vector, prefixed `CVSS:4.0/`, with no
-       nomenclature label inside the string — the label belongs in the report
-       row, where a reader sees it. The audit emits a `CVSS-B` (optionally
-       `CVSS-BT`) vector. Triage may later replace it with a `CVSS-BTE` vector,
-       and must state in the finding which metrics were modified and why —
-       `MAV`, `CR`/`IR`/`AR` assert facts about a deployment that a repository
-       scan has no standing to set.
+     - `cvss` is the CVSS 4.0 vector string, prefixed `CVSS:4.0/`, and nothing
+       else — no score, no label, no prefix inside the string. The audit emits
+       base metrics only. Triage may later replace it with a vector carrying
+       threat or environmental metrics, and must state in the finding which
+       metrics were added and why — `E`, `MAV`, `CR`/`IR`/`AR` assert facts
+       about a deployment that a repository scan has no standing to set.
      - `cvss_score` is a JSON **number** and must agree with `cvss`.
      - `efficacy` is the string `"High"`, `"Med"`, or `"Low"` — hardening
        only, and categorical by design. There is no `efficacy_score`: emitting
