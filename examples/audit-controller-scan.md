@@ -36,11 +36,11 @@ load the pool per-dial; the cost is negligible next to the TLS handshake.
 
 ### Pass 3 · Security findings
 
-| #  | Sev / Eff | Stage     | Location | Finding | Fix | Break-risk |
-|----|-----------|-----------|----------|---------|-----|-----------|
-| S1 | `CVSS 8.1 · High` | 3 · Exec  | `internal/exec/manager.go:34` | `inject` job name interpolated into a command string passed to `sh -c`; any caller controlling the name gets execution | Use `exec.Command` with an argument slice; drop the shell | Med |
-| S2 | `Efficacy High · CWE-269` | 2 · Authz | `deploy/rbac.yaml:30` | `rbac` controller SA granted `secrets: ["*"]`; no handler reads Secrets | Drop the grant | High |
-| S3 | `Efficacy Med · CWE-1188` | 4 · Data  | `internal/cmd/controller/root.go:147` | `expose` `net/http/pprof` on `localhost:6060` starts unconditionally, while the agent gates the identical block behind `FLEET_AGENT_PPROF_DISABLED` | Apply the same env gate the agent already uses | Low |
+| #  | Class | Rating | Stage | Location | Finding | Fix | Break-risk |
+|----|-------|--------|-------|----------|---------|-----|-----------|
+| S1 | Vulnerability | Severity: High (8.1) | 3 · Exec | `internal/exec/manager.go:34` | `[inject]` job name interpolated into a command string passed to `sh -c`; any caller controlling the name gets execution | Use `exec.Command` with an argument slice; drop the shell | Medium |
+| S2 | Hardening | Efficacy: High | 2 · Authz | `deploy/rbac.yaml:30` | `[rbac · CWE-269]` controller SA granted `secrets: ["*"]`; no handler reads Secrets | Drop the grant | High |
+| S3 | Hardening | Efficacy: Medium | 4 · Data | `internal/cmd/controller/root.go:147` | `[expose · CWE-1188]` `net/http/pprof` on `localhost:6060` starts unconditionally, while the agent gates the identical block behind `FLEET_AGENT_PPROF_DISABLED` | Apply the same env gate the agent already uses | Low |
 
 ```
 Vectors:
@@ -135,7 +135,7 @@ Findings saved to `.ponytail-sec/audit-20260911-143022-Xk9mQ2`.
         "tags": ["inject"],
         "finding": "Job name is interpolated into a shell command string passed to sh -c; any caller that controls the name achieves command execution",
         "fix": "Use exec.Command with an argument slice; drop the shell",
-        "break_risk": "Med",
+        "break_risk": "Medium",
         "status": "open"
       },
       {
@@ -156,7 +156,7 @@ Findings saved to `.ponytail-sec/audit-20260911-143022-Xk9mQ2`.
         "id": "S3",
         "type": "security",
         "class": "hardening",
-        "efficacy": "Med",
+        "efficacy": "Medium",
         "cwe": "CWE-1188",
         "stage": "4 · Data",
         "location": "internal/cmd/controller/root.go:147",

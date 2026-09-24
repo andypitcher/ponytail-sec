@@ -31,7 +31,7 @@ license: MIT
   down to hardening must not re-report as a scored vulnerability on the next
   scan. Say so on the row's delta line when it happened:
 
-  > 🔁 recurring — triaged as hardening, Efficacy Med; the deployment's private
+  > 🔁 recurring — triaged as hardening, Efficacy: Medium; the deployment's
   > management network closes the path the original score assumed
 
   Open the report with a delta summary line when a previous scan exists:
@@ -65,12 +65,12 @@ license: MIT
   in every pass carries one — code, dependency, and security alike.
 
   - **Low** — additive, or provably-unused removal (nothing references it). Apply freely.
-  - **Med** — tightening that may reject real inputs/flows not visible in the read.
+  - **Medium** — tightening that may reject real inputs/flows not visible in the read.
   - **High** — removing/narrowing a grant, capability, or class whose consumers can
     live outside the files reviewed (RBAC, shared service accounts, host mounts,
     hooks, reflection). Static review is blind here.
 
-  Med/High findings of **any type** carry the ⚠️ validate-at-runtime line below.
+  Medium/High findings of **any type** carry the ⚠️ validate-at-runtime line below.
 
   ## Three passes, in order
 
@@ -194,13 +194,13 @@ license: MIT
   - **Security posture** — `SECURITY.md`, advisory handling, responsiveness.
   - **OpenSSF Scorecard** — maintained score and any standout risk signals.
   - **Action** — exact replacement, vendoring/forking plan, or immutable pinning.
-  - **Break-risk** — an immutable pin is Low; `remove`/`vendor` is Med or High.
+  - **Break-risk** — an immutable pin is Low; `remove`/`vendor` is Medium or High.
 
   Example:
   > `D1` `build.sbt` HTTP resolvers (spray.io, bintray, sonatype staging,
   > download.java.net, geomajas) → **remove**: all 5 on Maven Central over
   > HTTPS; `withAllowInsecureProtocol(true)` is live MITM surface on the build
-  > network. **Break-risk: Med** — an artifact may resolve only from one of them.
+  > network. **Break-risk: Medium** — an artifact may resolve only from one of them.
 
   ---
 
@@ -208,22 +208,44 @@ license: MIT
 
   All findings, numbered (`S1`, `S2` …), stage order.
 
-  The `Sev / Eff` cell takes one of two forms, decided by the finding's class.
-  The two measure different things and are never mixed in one cell:
+  Two columns carry the triage: **`Class`** says what kind of thing this is,
+  **`Rating`** says how it is measured. Splitting them means neither column has
+  to be decoded — a reader sorting by class reads one column, and the rating
+  never has to be parsed to work out which scale it is on.
 
-  - **Vulnerability → severity.** `CVSS <score> · <label>`, e.g.
-    `CVSS 9.3 · Critical`. Reactive: how bad it is that this is already broken.
-    The score is CVSS 4.0 base, and the row says `CVSS` — no nomenclature
-    suffix. The audit scores base metrics only, because threat and
-    environmental metrics assert facts about a deployment that a repository
-    scan has no standing to set.
-  - **Hardening → efficacy.** `Efficacy <label> · CWE-nnnn`, e.g.
-    `Efficacy High · CWE-1188`. Proactive: how much attacker leverage the fix
-    removes, which is the question a hardening item actually answers. A label
-    only — `High`, `Med`, or `Low` — never a severity, never a number. The CWE
-    maps the finding to a CIS / OWASP ASVS / STIG control, which is real work;
-    on a scored vulnerability it is ceremony, so it appears on hardening rows
-    only.
+  **`Class`** — one of:
+
+  - `Vulnerability` — behaviour contradicts the documented contract.
+  - `CVE` — a vulnerability tied to a specific published CVE ID. Rare here:
+    enumerating advisories in third-party packages is out of scope, so this is
+    for the case where project code misuses a dependency in a way that lands on
+    a known CVE. Record the ID in the finding's badge and in `cve`.
+  - `Hardening` — behaviour matches the documented contract, but the permissive
+    option is the default or a control is missing.
+
+  **`Rating`** — the prefix names the scale, so the two are never confused:
+
+  - **Vulnerability / CVE → `Severity: <Level> (<score>)`**, e.g.
+    `Severity: High (8.1)`. Reactive: how bad it is that this is already broken.
+    The score is CVSS 4.0 base. The audit scores base metrics only, because
+    threat and environmental metrics assert facts about a deployment that a
+    repository scan has no standing to set.
+  - **Hardening → `Efficacy: <Level>`**, e.g. `Efficacy: High`. Proactive: how
+    much attacker leverage the fix removes, which is the question a hardening
+    item actually answers. A label only — `High`, `Medium`, or `Low` — never a
+    severity, never a number.
+
+  **Levels are spelled out.** `High`, `Medium`, `Low` — in `Rating`, in
+  `Break-risk`, and in the persisted JSON. Never `Med`. A truncation saves three
+  characters in a column already wider than the word.
+
+  **Tags and CWE go in the `Finding` cell, as one leading badge.** `[inject]`,
+  `[rbac · CWE-269]`. The badge is the finding's identifiers; the rest of the
+  cell is prose. Keeping them out of `Class` and `Rating` is what lets those two
+  columns stay scannable. A CWE maps the finding to a CIS / OWASP ASVS / STIG
+  control, which is real work on a hardening item; on a scored vulnerability it
+  is ceremony, so it appears on hardening badges only. A `CVE` row puts its ID
+  in the badge the same way.
 
   **Base metrics only, and say so once.** Per FIRST, *"CVSS Base (CVSS-B)
   scores are designed to measure the severity of a vulnerability and should not
@@ -244,8 +266,8 @@ license: MIT
   skill already uses — attacker leverage removed ÷ lines changed:
 
   - `High` — a one-setting change closes a whole stage for every deployment.
-  - `Med` — closes a real path, but one that needs a precondition, or the fix
-    is more than a default flip.
+  - `Medium` — closes a real path, but one that needs a precondition, or the
+    fix is more than a default flip.
   - `Low` — defence-in-depth; the paths it closes are largely closed elsewhere.
 
   **Categorical, deliberately.** There is no `efficacy_score` and must not be
@@ -262,12 +284,12 @@ license: MIT
   low-likelihood paths have been discounted" — discount those paths in the
   vector rather than scoring `AC:L` and caveating in prose afterwards.
 
-  | #  | Sev / Eff      | Stage     | Location | Finding | Fix | Break-risk |
-  |----|----------------|-----------|----------|---------|-----|-----------|
-  | S1 | `CVSS 9.3 · Critical` | 1 · Trust | `ClientSslConfig.scala:43` | `auth` `DummyTrustManager` — `checkServerTrusted()` no-op; all manager→controller HTTPS MITMable | Load CA cert into real `TrustManagerFactory` | Low |
-  | S2 | `CVSS 8.1 · High` | 3 · Exec  | `ProcessManager.scala:34` | `inject` actor message interpolated into `bash -i` — any sender achieves RCE | Replace with `ProcessBuilder`, no shell | Med |
-  | S3 | `Efficacy High · CWE-1188` | 1 · Trust | `values.yaml:21` | `auth` permissive TLS trust mode is the shipped default; `strict` exists and is documented | Ship `strict` as the default | High |
-  | S4 | `Efficacy Med · CWE-269` | 2 · Authz | `rbac.yaml:30` | `rbac` operator SA granted `secrets: ["*"]`; no code path reads Secrets | Drop the grant | High |
+  | #  | Class | Rating | Stage | Location | Finding | Fix | Break-risk |
+  |----|-------|--------|-------|----------|---------|-----|-----------|
+  | S1 | Vulnerability | Severity: Critical (9.3) | 1 · Trust | `ClientSslConfig.scala:43` | `[auth]` `DummyTrustManager` — `checkServerTrusted()` no-op; all manager→controller HTTPS MITMable | Load CA cert into real `TrustManagerFactory` | Low |
+  | S2 | Vulnerability | Severity: High (8.1) | 3 · Exec | `ProcessManager.scala:34` | `[inject]` actor message interpolated into `bash -i` — any sender achieves RCE | Replace with `ProcessBuilder`, no shell | Medium |
+  | S3 | Hardening | Efficacy: High | 1 · Trust | `values.yaml:21` | `[auth · CWE-1188]` permissive TLS trust mode is the shipped default; `strict` exists and is documented | Ship `strict` as the default | High |
+  | S4 | Hardening | Efficacy: Medium | 2 · Authz | `rbac.yaml:30` | `[rbac · CWE-269]` operator SA granted `secrets: ["*"]`; no code path reads Secrets | Drop the grant | High |
 
   Emit the computed vectors immediately below the table, one per line — not as a
   column, which would make the table unreadable. Vulnerabilities only; a
@@ -399,7 +421,7 @@ license: MIT
              "id": "S1",
              "type": "security",
              "class": "hardening",
-             "efficacy": "Med",
+             "efficacy": "Medium",
              "cwe": "CWE-1188",
              "stage": "4 · Data",
              "location": "internal/cmd/controller/root.go:147",
@@ -421,7 +443,7 @@ license: MIT
              "tags": ["inject"],
              "finding": "Job name is interpolated into a shell command string passed to sh -c; any caller that controls the name achieves command execution",
              "fix": "Use exec.Command with an argument slice; drop the shell",
-             "break_risk": "Med",
+             "break_risk": "Medium",
              "status": "open"
            }
          ]
@@ -447,7 +469,9 @@ license: MIT
        `findings.json` — a triage decision must survive a re-scan, or every
        future audit re-reports a downgraded finding at its original score.
      - IDs carry their type prefix (`C`/`D`/`S`) and match the report tables.
-     - `class` is `vulnerability` or `hardening` — the discriminator.
+     - `class` is `vulnerability` or `hardening` — the discriminator. It stays
+       lowercase in JSON and is title-cased for the `Class` column; a
+       vulnerability carrying a `cve` renders there as `CVE`.
      - `severity` is the CVSS 4.0 qualitative label alone — `"Critical"`,
        `"High"`, `"Medium"`, `"Low"` — and must agree with `cvss_score`.
        Vulnerabilities only.
@@ -458,19 +482,24 @@ license: MIT
        metrics were added and why — `E`, `MAV`, `CR`/`IR`/`AR` assert facts
        about a deployment that a repository scan has no standing to set.
      - `cvss_score` is a JSON **number** and must agree with `cvss`.
-     - `efficacy` is the string `"High"`, `"Med"`, or `"Low"` — hardening
+     - `efficacy` is the string `"High"`, `"Medium"`, or `"Low"` — hardening
        only, and categorical by design. There is no `efficacy_score`: emitting
        one invites a reader to rank it against `cvss_score`, which measures
        something else. It records leverage removed by the fix, not impact, so
        never derive it from a CVSS calculation.
      - `cwe` is optional and belongs on hardening findings, where it maps to a
        CIS / OWASP ASVS / STIG control. Omit it where it adds nothing.
+     - `cve` is optional, vulnerabilities only, and holds a published CVE ID
+       (`"CVE-2024-1234"`). Set it only when the finding genuinely is that CVE
+       reached through project code — it drives the `CVE` class in the table,
+       so an invented ID misreports the finding. Omit it otherwise.
      - **Measurement fields apply to `security` findings only.** Never invent a
        `cvss`, `cvss_score`, `severity`, `efficacy`, or `cwe`
        for a code or dependency finding — those carry `break_risk` (and, for
        deps, `verdict`) as their signal. A fabricated score is worse than no
        score.
-     - `break_risk` is required on every finding of every type.
+     - `break_risk` is required on every finding of every type, and is
+       `"High"`, `"Medium"`, or `"Low"` — spelled out, never `"Med"`.
      - `upstream_url` points at the exact pinned version, or the latest version
        when the dep is unpinned.
      - Each bucket may be an empty array, but always emit all three keys.
@@ -587,7 +616,7 @@ license: MIT
   jobs, reflection, service accounts borrowed by other components. A grant — or a
   class — that looks dead may be load-bearing.
 
-  So every **Med/High break-risk** finding, in **any** of the three passes, gets
+  So every **Medium/High break-risk** finding, in **any** of the three passes, gets
   this line appended; skip it for Low-risk findings that only add a control:
 
   > ⚠️ Static analysis only — validate at runtime. Apply the fix and run it (build +
