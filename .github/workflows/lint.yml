@@ -67,20 +67,57 @@ jobs:
                  | select((.findings | has($k)) | not)
                  | "missing findings bucket: \($k)"),
                 (.findings.security // [] | .[]
-                 | select((.kind | IN("vulnerability", "hardening", "secret")) | not)
-                 | "\(.id): kind must be vulnerability, hardening, or secret"),
+                 | select((.class | IN("vulnerability", "hardening")) | not)
+                 | "\(.id): class must be vulnerability or hardening"),
+                (.findings[][] as $f | $f | to_entries[]
+                 | select(.value == null)
+                 | "\($f.id): \(.key) is null; omit non-applicable keys entirely"),
                 (.findings.security // [] | .[]
+                 | select(.class == "vulnerability")
                  | select((.cvss_score | type) != "number"
-                           or (.cvss_vector | type) != "string"
-                           or (.cvss_vector | startswith("CVSS:4.0/") | not))
-                  | "\(.id): cvss_score must be a number and cvss_vector must be a CVSS:4.0/ string"),
+                           or (.cvss | type) != "string"
+                           or (.cvss | startswith("CVSS:4.0/") | not)
+                           or (.severity | type) != "string")
+                  | "\(.id): a vulnerability needs severity, a CVSS:4.0/ vector in cvss, and a numeric cvss_score"),
+                (.findings.security // [] | .[]
+                 | select(.class == "vulnerability")
+                 | select(has("efficacy") or has("efficacy_score"))
+                 | "\(.id): efficacy is not allowed on a vulnerability"),
+                (.findings.security // [] | .[]
+                 | select(.class == "hardening")
+                 | select((.efficacy | IN("High", "Medium", "Low")) | not)
+                 | "\(.id): hardening needs efficacy High, Medium, or Low"),
+                (.findings.security // [] | .[]
+                 | select(.class == "hardening")
+                 | select(has("cve"))
+                 | "\(.id): cve is not allowed on a hardening finding"),
+                (.findings.security // [] | .[]
+                 | select(has("cve") and ((.cve | type) != "string"
+                           or (.cve | startswith("CVE-") | not)))
+                 | "\(.id): cve must be a CVE- string when present"),
+                (.findings.security // [] | .[]
+                 | select(.class == "hardening")
+                 | select(has("severity") or has("cvss") or has("cvss_score"))
+                 | "\(.id): severity/CVSS fields are not allowed on a hardening finding"),
+                (.findings.security // [] | .[]
+                 | select(has("efficacy_score"))
+                 | "\(.id): efficacy is categorical; efficacy_score is not part of the schema"),
+                (.findings.security // [] | .[]
+                 | select(has("cwe") and ((.cwe | type) != "string"
+                           or (.cwe | startswith("CWE-") | not)))
+                 | "\(.id): cwe must be a CWE- string when present"),
+                (.findings.security // [] | .[]
+                 | select((.status | IN("open", "triaged", "accepted-risk", "resolved")) | not)
+                 | "\(.id): status must be open, triaged, accepted-risk, or resolved"),
                 ((.findings.code // []) + (.findings.dependency // []) | .[]
-                 | select(has("cvss_score") or has("cvss_vector"))
-                 | "\(.id): CVSS fields are not allowed on code/dependency findings"),
+                 | select(has("cvss_score") or has("cvss") or has("severity")
+                           or has("efficacy") or has("efficacy_score")
+                           or has("cwe") or has("cve"))
+                 | "\(.id): severity/CVSS/efficacy/CWE fields are not allowed on code/dependency findings"),
                 ((.findings.code // []) + (.findings.dependency // [])
                    + (.findings.security // []) | .[]
-                 | select(has("break_risk") | not)
-                 | "\(.id): missing break_risk")
+                 | select((.break_risk | IN("High", "Medium", "Low")) | not)
+                 | "\(.id): break_risk must be High, Medium, or Low")
               ][]
             ' "$file")
             if [ -n "$errors" ]; then
