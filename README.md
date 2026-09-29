@@ -160,10 +160,23 @@ lean output. Ends with Ship or Ship blocked — nothing in between. Invoke
 directly or say "harden this", "security review", "is this dep safe",
 "reduce attack surface".
 
-**`/ponytail-sec-audit`** — Full project scan. All findings, CVSS 4.0 scored,
-with blast-radius narrative and a frank "if I were you" prioritisation that
-may differ from the score order. Invoke directly or say "full security audit",
-"audit the project", "security scan".
+Examples: [new service](https://github.com/andypitcher/ponytail-sec/blob/main/examples/companion-diagnostic-service.md) ·
+[dependency](https://github.com/andypitcher/ponytail-sec/blob/main/examples/companion-jexl-dep.md).
+
+**`/ponytail-sec-audit`** — Full project scan. All findings in one table with a
+`Class` column and a `Rating` column, each measured by what it actually is:
+vulnerabilities are `Vulnerability` (or `CVE`) and carry a severity and a
+CVSS 4.0 base score (`Severity: High (8.1)`); hardening items are `Hardening`
+and carry an efficacy — how much attacker leverage the fix removes, as a
+`High`/`Medium`/`Low` judgement rather than a number (`Efficacy: High`) — plus
+a CWE, shown as a badge in the finding cell. No severity and no score on a
+hardening item, because a base score on a documented default is
+impact-dominated and misranks the table. Ends with a blast-radius
+narrative and a frank "if I were you" prioritisation that may differ from the
+score order. Invoke directly or say "full security audit", "audit the project",
+"security scan".
+
+Example: [full audit with persisted findings](https://github.com/andypitcher/ponytail-sec/blob/main/examples/audit-controller-scan.md).
 
 ## Relation
 

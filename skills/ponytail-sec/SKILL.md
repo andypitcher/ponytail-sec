@@ -37,12 +37,12 @@ license: MIT
   carries one: code, dependency, and security alike.
 
   - **Low** — additive, or provably-unused removal (nothing references it). Apply freely.
-  - **Med** — tightening that may reject real inputs/flows the diff doesn't show.
+  - **Medium** — tightening that may reject real inputs/flows the diff doesn't show.
   - **High** — removing/narrowing a grant, capability, or class whose consumers can
     live outside the diff (RBAC, shared service accounts, host mounts, reflection).
     Static review is blind here.
 
-  Med/High findings of **any type** carry the ⚠️ validate-at-runtime line below.
+  Medium/High findings of **any type** carry the ⚠️ validate-at-runtime line below.
 
   ## Three passes, in order
 
@@ -144,7 +144,7 @@ license: MIT
   - **Security posture** — `SECURITY.md`, advisory handling, responsiveness.
   - **OpenSSF Scorecard** — maintained score and any standout risk signals.
   - **Action** — exact replacement, vendoring/forking plan, or immutable pinning.
-  - **Break-risk** — an immutable pin is Low; `remove`/`vendor` is Med or High.
+  - **Break-risk** — an immutable pin is Low; `remove`/`vendor` is Medium or High.
 
   Keep the block short. No dependency essays in companion mode.
 
@@ -158,7 +158,7 @@ license: MIT
   | #  | Kind          | Stage     | Location | Finding | Fix | Break-risk |
   |----|---------------|-----------|----------|---------|-----|-----------|
   | S1 | hardening     | 1 · Trust | `auth.py:23` | `auth` `@lru_cache` bakes CA cert — secret rotation silent until restart | Remove `@lru_cache`; matches PR #253 | Low |
-  | S2 | vulnerability | 1 · Trust | `oauth.go:154` | `auth` `validateJWT` enforces issuer + scope but not audience — a token minted for another resource is accepted | Add `jwt.WithAudience(c.ResourceURL)` | Med |
+  | S2 | vulnerability | 1 · Trust | `oauth.go:154` | `auth` `validateJWT` enforces issuer + scope but not audience — a token minted for another resource is accepted | Add `jwt.WithAudience(c.ResourceURL)` | Medium |
   | S3 | vulnerability | 3 · Exec  | `unpack.js:12` | `inject` archive entry paths joined to the output dir without validation — traversal writes outside it | Reject entries containing `..` after normalisation | Low |
 
   `kill-chain: 3 paths found.`
@@ -202,7 +202,7 @@ license: MIT
   components. Static review cannot see those code paths, so a grant — or a class —
   that looks dead may be load-bearing at runtime.
 
-  So every **Med/High break-risk** finding, in **any** of the three passes, gets
+  So every **Medium/High break-risk** finding, in **any** of the three passes, gets
   this line appended; skip it for Low-risk findings that only add a control:
 
   > ⚠️ Static analysis only — validate at runtime. Apply the fix and run it (build +
