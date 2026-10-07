@@ -136,6 +136,14 @@ license: MIT
   - `D1`, `D2` … — dependency findings
   - `S1`, `S2` … — security findings
 
+  Every finding in every pass must have a short `title` for use as a dedicated
+  issue title. Keep it to about 80 characters (100 maximum), on one line, with
+  no trailing period. Use CVE-title style: describe the weakness and its impact
+  (what is wrong and the consequence), not its location. Do not include file
+  paths or line numbers; the `location` field already carries that information.
+  A dedicated issue title should be `[<id>] <title>`, e.g. `[S1] Job name
+  injected into shell command allows command execution`.
+
   ---
 
   ### Pass 1 · Code
@@ -145,7 +153,8 @@ license: MIT
   Give each finding an ID and a break-risk.
 
   Example:
-  > `C1` `ProcessManager.scala`: The interactive `bash -i` actor (lines 17–56)
+  > `C1` **Interactive shell actor allows arbitrary command execution**
+  > `ProcessManager.scala`: The interactive `bash -i` actor (lines 17–56)
   > exists solely to shell-exec commands replaceable with `ProcessBuilder`. Every
   > string reaching its mailbox executes verbatim — delete the class.
   > **Break-risk: High** — the actor may be addressed by name from config or
@@ -171,7 +180,8 @@ license: MIT
   - **Break-risk** — an immutable pin is Low; `remove`/`vendor` is Med or High.
 
   Example:
-  > `D1` `build.sbt` HTTP resolvers (spray.io, bintray, sonatype staging,
+  > `D1` **Insecure artifact resolvers enable build-network MITM**
+  > `build.sbt` HTTP resolvers (spray.io, bintray, sonatype staging,
   > download.java.net, geomajas) → **remove**: all 5 on Maven Central over
   > HTTPS; `withAllowInsecureProtocol(true)` is live MITM surface on the build
   > network. **Break-risk: Med** — an artifact may resolve only from one of them.
@@ -191,12 +201,12 @@ license: MIT
   Compute the full CVSS 4.0 vector **now**, at table time, for every finding —
   it must be persisted to `findings.json`, so it cannot be deferred to `expand N`.
 
-  | #  | Sev            | Kind          | Stage     | Location | Finding | Fix | Break-risk |
-  |----|----------------|---------------|-----------|----------|---------|-----|-----------|
-  | S1 | Critical (9.3) | vulnerability | 1 · Trust | `ClientSslConfig.scala:43` | `auth` `DummyTrustManager` — `checkServerTrusted()` no-op; all manager→controller HTTPS MITMable | Load CA cert into real `TrustManagerFactory` | Low |
-  | S2 | High (8.1)     | vulnerability | 3 · Exec  | `ProcessManager.scala:34` | `inject` actor message interpolated into `bash -i` — any sender achieves RCE | Replace with `ProcessBuilder`, no shell | Med |
-  | S3 | High (7.4)     | hardening     | 2 · Authz | `rbac.yaml:30` | `rbac` operator SA granted `secrets: ["*"]`; no code path reads Secrets | Drop the grant | High |
-  | S4 | Medium (6.5)   | secret        | 4 · Data  | `charts/values.yaml:12` | `secret` default Grafana admin password committed in chart values | Move to a Secret ref; fail closed if unset | Med |
+  | #  | Sev            | Title | Kind          | Stage     | Location | Finding | Fix | Break-risk |
+  |----|----------------|-------|---------------|-----------|----------|---------|-----|-----------|
+  | S1 | Critical (9.3) | Certificate validation bypass enables HTTPS man-in-the-middle attacks | vulnerability | 1 · Trust | `ClientSslConfig.scala:43` | `auth` `DummyTrustManager` — `checkServerTrusted()` no-op; all manager→controller HTTPS MITMable | Load CA cert into real `TrustManagerFactory` | Low |
+  | S2 | High (8.1)     | Shell interpolation allows arbitrary command execution | vulnerability | 3 · Exec  | `ProcessManager.scala:34` | `inject` actor message interpolated into `bash -i` — any sender achieves RCE | Replace with `ProcessBuilder`, no shell | Med |
+  | S3 | High (7.4)     | Wildcard Secret access exceeds controller authorization needs | hardening     | 2 · Authz | `rbac.yaml:30` | `rbac` operator SA granted `secrets: ["*"]`; no code path reads Secrets | Drop the grant | High |
+  | S4 | Medium (6.5)   | Default Grafana password exposes a committed credential | secret        | 4 · Data  | `charts/values.yaml:12` | `secret` default Grafana admin password committed in chart values | Move to a Secret ref; fail closed if unset | Med |
 
   Emit the computed vectors immediately below the table, one per line — not as a
   column, which would make the table unreadable:
@@ -278,6 +288,7 @@ license: MIT
          "code": [
            {
              "id": "C1",
+             "title": "Cached CA cert pool ignores CA rotation until process restart",
              "type": "code",
              "location": "internal/ssl/client.go:31",
              "finding": "sync.Once caches the CA cert pool at first request; a CA rotation is silent until process restart",
@@ -290,6 +301,7 @@ license: MIT
          "dependency": [
            {
              "id": "D1",
+             "title": "Solo-maintained gjson dependency replaceable by stdlib encoding/json",
              "type": "dependency",
              "location": "go.mod:24",
              "package": "github.com/tidwall/gjson",
@@ -310,6 +322,7 @@ license: MIT
          "security": [
            {
              "id": "S1",
+             "title": "pprof debug endpoint enabled unconditionally in controller",
              "type": "security",
              "kind": "hardening",
              "severity": "Medium (4.6)",
@@ -325,6 +338,7 @@ license: MIT
            },
            {
              "id": "S2",
+             "title": "Job name injected into shell command allows command execution",
              "type": "security",
              "kind": "vulnerability",
              "severity": "High (8.1)",
@@ -354,6 +368,10 @@ license: MIT
        carry `break_risk` (and, for deps, `verdict`) as their signal. A
        fabricated score is worse than no score.
      - `break_risk` is required on every finding of every type.
+     - `title` is required on every finding of every type. Keep it to about 80
+       characters and no more than 100, on one line, with no trailing period.
+       Describe the weakness and impact, not the location; never include file
+       paths or line numbers.
      - `upstream_url` points at the exact pinned version, or the latest version
        when the dep is unpinned.
      - Each bucket may be an empty array, but always emit all three keys.

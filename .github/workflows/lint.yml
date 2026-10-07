@@ -79,6 +79,17 @@ jobs:
                  | "\(.id): CVSS fields are not allowed on code/dependency findings"),
                 ((.findings.code // []) + (.findings.dependency // [])
                    + (.findings.security // []) | .[]
+                 | if (.title | type) != "string" then
+                     "\(.id): title must be a non-empty string"
+                   elif (.title | length) == 0 then
+                     "\(.id): title must be a non-empty string"
+                   elif (.title | length) > 100 then
+                     "\(.id): title must be 100 characters or fewer"
+                   elif (.title | test("[A-Za-z0-9_./-]+\\.[A-Za-z0-9]+:[0-9]+")) then
+                     "\(.id): title must not contain a file path and line number"
+                   else empty end),
+                ((.findings.code // []) + (.findings.dependency // [])
+                   + (.findings.security // []) | .[]
                  | select(has("break_risk") | not)
                  | "\(.id): missing break_risk")
               ][]

@@ -12,7 +12,8 @@ audit exists at `.ponytail-sec/audit-20260902-091455-a7Kd2p`.
 
 ### Pass 1 · Code
 
-`C1` `internal/ssl/client.go`: `sync.Once` caches the CA cert pool at first
+`C1` **Cached CA cert pool ignores CA rotation until process restart**
+`internal/ssl/client.go`: `sync.Once` caches the CA cert pool at first
 request, so a CA rotation is silent until the process restarts — revoked
 intermediates stay trusted for the life of the pod. Drop the `sync.Once` and
 load the pool per-dial; the cost is negligible next to the TLS handshake.
@@ -22,7 +23,8 @@ load the pool per-dial; the cost is negligible next to the TLS handshake.
 
 ### Pass 2 · Dependencies
 
-`D1` `github.com/tidwall/gjson v1.14.0`
+`D1` **Solo-maintained gjson dependency replaceable by stdlib encoding/json**
+`github.com/tidwall/gjson v1.14.0`
 
 - **Verdict** — **stdlib**.
 - **Upstream** — `https://pkg.go.dev/github.com/tidwall/gjson@v1.14.0` (pinned).
@@ -36,11 +38,11 @@ load the pool per-dial; the cost is negligible next to the TLS handshake.
 
 ### Pass 3 · Security findings
 
-| #  | Sev            | Kind          | Stage     | Location | Finding | Fix | Break-risk |
-|----|----------------|---------------|-----------|----------|---------|-----|-----------|
-| S1 | High (8.1)     | vulnerability | 3 · Exec  | `internal/exec/manager.go:34` | `inject` job name interpolated into a command string passed to `sh -c`; any caller controlling the name gets execution | Use `exec.Command` with an argument slice; drop the shell | Med |
-| S2 | High (7.4)     | hardening     | 2 · Authz | `deploy/rbac.yaml:30` | `rbac` controller SA granted `secrets: ["*"]`; no handler reads Secrets | Drop the grant | High |
-| S3 | Medium (4.6)   | hardening     | 4 · Data  | `internal/cmd/controller/root.go:147` | `expose` `net/http/pprof` on `localhost:6060` starts unconditionally, while the agent gates the identical block behind `FLEET_AGENT_PPROF_DISABLED` | Apply the same env gate the agent already uses | Low |
+| #  | Sev            | Title | Kind          | Stage     | Location | Finding | Fix | Break-risk |
+|----|----------------|-------|---------------|-----------|----------|---------|-----|-----------|
+| S1 | High (8.1)     | Job name injected into shell command allows command execution | vulnerability | 3 · Exec  | `internal/exec/manager.go:34` | `inject` job name interpolated into a command string passed to `sh -c`; any caller controlling the name gets execution | Use `exec.Command` with an argument slice; drop the shell | Med |
+| S2 | High (7.4)     | Controller ServiceAccount granted wildcard access to all Secrets | hardening     | 2 · Authz | `deploy/rbac.yaml:30` | `rbac` controller SA granted `secrets: ["*"]`; no handler reads Secrets | Drop the grant | High |
+| S3 | Medium (4.6)   | pprof debug endpoint enabled unconditionally in controller | hardening     | 4 · Data  | `internal/cmd/controller/root.go:147` | `expose` `net/http/pprof` on `localhost:6060` starts unconditionally, while the agent gates the identical block behind `FLEET_AGENT_PPROF_DISABLED` | Apply the same env gate the agent already uses | Low |
 
 ```
 Vectors:
@@ -85,6 +87,7 @@ Findings saved to `.ponytail-sec/audit-20260911-143022-Xk9mQ2`.
     "code": [
       {
         "id": "C1",
+        "title": "Cached CA cert pool ignores CA rotation until process restart",
         "type": "code",
         "location": "internal/ssl/client.go:31",
         "finding": "sync.Once caches the CA cert pool at first request; a CA rotation is silent until process restart",
@@ -97,6 +100,7 @@ Findings saved to `.ponytail-sec/audit-20260911-143022-Xk9mQ2`.
     "dependency": [
       {
         "id": "D1",
+        "title": "Solo-maintained gjson dependency replaceable by stdlib encoding/json",
         "type": "dependency",
         "location": "go.mod:24",
         "package": "github.com/tidwall/gjson",
@@ -117,6 +121,7 @@ Findings saved to `.ponytail-sec/audit-20260911-143022-Xk9mQ2`.
     "security": [
       {
         "id": "S1",
+        "title": "Job name injected into shell command allows command execution",
         "type": "security",
         "kind": "vulnerability",
         "severity": "High (8.1)",
@@ -132,6 +137,7 @@ Findings saved to `.ponytail-sec/audit-20260911-143022-Xk9mQ2`.
       },
       {
         "id": "S2",
+        "title": "Controller ServiceAccount granted wildcard access to all Secrets",
         "type": "security",
         "kind": "hardening",
         "severity": "High (7.4)",
@@ -147,6 +153,7 @@ Findings saved to `.ponytail-sec/audit-20260911-143022-Xk9mQ2`.
       },
       {
         "id": "S3",
+        "title": "pprof debug endpoint enabled unconditionally in controller",
         "type": "security",
         "kind": "hardening",
         "severity": "Medium (4.6)",
