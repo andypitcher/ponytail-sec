@@ -85,8 +85,7 @@ jobs:
                      "\(.id): title must be a non-empty string"
                    elif (.title | length) > 100 then
                      "\(.id): title must be 100 characters or fewer"
-                   elif (.title | test("[A-Za-z0-9_./-]+\\.[A-Za-z0-9]+:[0-9]+")) then
-                     "\(.id): title must not contain a file path and line number"
+                  elif (.title | test("[A-Za-z0-9_./-]+\\.[A-Za-z0-9]+:[0-9]+|[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+:[0-9]+")) then
                    else empty end),
                 ((.findings.code // []) + (.findings.dependency // [])
                    + (.findings.security // []) | .[]
