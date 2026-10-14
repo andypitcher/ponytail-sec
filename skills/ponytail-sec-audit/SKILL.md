@@ -200,15 +200,15 @@ license: MIT
 
   All findings, numbered (`S1`, `S2` …), stage order.
 
-  Vulnerabilities use a CVSS-B severity (`Critical`, `High`, `Medium`, or `Low`)
+  Vulnerabilities use a CVSS 4.0 severity (`Critical`, `High`, `Medium`, or `Low`)
   and base score. Hardening uses categorical efficacy (`High`, `Medium`, or
   `Low`) and requires a CWE. Vulnerabilities must not have a CWE or efficacy;
   hardening must not have severity or CVSS fields.
 
-  Compute the full CVSS-B 4.0 vector **now**, at table time, for every
-  vulnerability — it must be persisted to `findings.json`, so it cannot be
-  deferred to `expand N`. Severity must match its score: ≥9 Critical, ≥7 High,
-  ≥4 Medium, and >0 Low.
+  Compute the full FIRST CVSS 4.0 vector **now**, at table time, for every
+  vulnerability — it must be persisted with `cvss_nomenclature: "CVSS-B"` to
+  `findings.json`, so it cannot be deferred to `expand N`. Severity must match
+  its score: ≥9 Critical, ≥7 High, ≥4 Medium, and >0 Low.
 
   For any known CVE, use `CVE` as the table Class and include its `cve` identifier
   in persisted JSON; it remains a vulnerability for schema and score validation.
@@ -225,10 +225,10 @@ license: MIT
 
   ```
   Vectors:
-    S1  CVSS-B:4.0/AV:N/AC:L/AT:N/PR:N/UI:N/VC:H/VI:H/VA:H/SC:H/SI:H/SA:H
-    S2  CVSS-B:4.0/AV:A/AC:L/AT:N/PR:L/UI:N/VC:H/VI:H/VA:H/SC:N/SI:N/SA:N
-    S3  CVSS-B:4.0/AV:N/AC:L/AT:N/PR:L/UI:N/VC:H/VI:H/VA:N/SC:N/SI:N/SA:N
-    S4  CVSS-B:4.0/AV:N/AC:L/AT:N/PR:N/UI:N/VC:H/VI:L/VA:N/SC:N/SI:N/SA:N
+    S1  CVSS:4.0/AV:N/AC:L/AT:N/PR:N/UI:N/VC:H/VI:H/VA:H/SC:H/SI:H/SA:H
+    S2  CVSS:4.0/AV:A/AC:L/AT:N/PR:L/UI:N/VC:H/VI:H/VA:H/SC:N/SI:N/SA:N
+    S3  CVSS:4.0/AV:N/AC:L/AT:N/PR:L/UI:N/VC:H/VI:H/VA:N/SC:N/SI:N/SA:N
+    S4  CVSS:4.0/AV:N/AC:L/AT:N/PR:N/UI:N/VC:H/VI:L/VA:N/SC:N/SI:N/SA:N
   ```
 
   Severity = impact if exploited. Break-risk is orthogonal — see the section above.
@@ -266,7 +266,7 @@ license: MIT
   > attacker does with it, or a concrete fix — just ask by number.
 
   When the user asks about a finding by number, emit:
-  - **Root cause** — 1 sentence. Append the CVSS-B 4.0 vector already computed for
+  - **Root cause** — 1 sentence. Append the CVSS 4.0 vector already computed for
     the table on the same line; do not recompute it.
   - **Exploit scenario** — 1 sentence: what the attacker does and what they gain.
   - **Fix** — invoke ponytail on the affected file/snippet for the minimal diff.
@@ -355,7 +355,7 @@ license: MIT
              "severity": "High",
              "cvss_score": 8.1,
              "cvss_nomenclature": "CVSS-B",
-             "cvss": "CVSS-B:4.0/AV:A/AC:L/AT:N/PR:L/UI:N/VC:H/VI:H/VA:H/SC:N/SI:N/SA:N",
+             "cvss": "CVSS:4.0/AV:A/AC:L/AT:N/PR:L/UI:N/VC:H/VI:H/VA:H/SC:N/SI:N/SA:N",
              "stage": "3 · Exec",
              "location": "internal/exec/manager.go:34",
              "tags": ["inject"],
@@ -374,8 +374,8 @@ license: MIT
        vulnerability. A known CVE is a vulnerability with a `cve` string.
      - A vulnerability requires `severity` (`Critical`, `High`, `Medium`, or
        `Low`), numeric `cvss_score`, `cvss_nomenclature` (`CVSS-B`; triage may
-       later set `CVSS-BT` or `CVSS-BTE`), and `cvss` (the full vector prefixed
-       `CVSS-B:4.0/`). Severity must match the CVSS-B 4.0 score band: ≥9
+       later set `CVSS-BT` or `CVSS-BTE`), and `cvss` (the full FIRST vector
+       prefixed `CVSS:4.0/`). Severity must match the CVSS 4.0 score band: ≥9
        Critical, ≥7 High, ≥4 Medium, and >0 Low.
      - A vulnerability must not have `efficacy`, `cwe`, or `efficacy_score`.
        Hardening requires `efficacy` (`High`, `Medium`, or `Low`) and a `cwe`

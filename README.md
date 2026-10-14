@@ -168,7 +168,7 @@ Examples: [new service](https://github.com/andypitcher/ponytail-sec/blob/main/ex
 **`/ponytail-sec-audit`** — Full project scan. Security findings use one table
 with `# · Class · Rating · Stage · Location · Finding · Fix · Break-risk`.
 Vulnerabilities are `Vulnerability` (or `CVE` when a CVE is known) and carry a
-CVSS-B 4.0 severity and base score (`Severity: High (CVSS-B 8.1)`); hardening
+CVSS 4.0 severity and base score (`Severity: High (CVSS-B 8.1)`); hardening
 items are `Hardening` and carry an efficacy — how much attacker leverage the
 fix removes — as a `High`/`Medium`/`Low` judgement (`Efficacy: High`) plus a
 required CWE badge in the finding cell. Hardening has no severity or CVSS

@@ -59,7 +59,7 @@ else
     (all_findings as $finding
      | select(($finding | type) == "object")
      | select(($finding.title | type) == "string")
-     | select($finding.title | test("(^|[[:space:]])([[:alnum:]_.-]+/)+[[:alnum:]_.-]+(:[0-9]+)?([[:space:]]|$)|:[0-9]+([[:space:]]|$)"))
+     | select($finding.title | test("(^|[^[:alnum:]_])([[:alnum:]_.-]+/)*[[:alnum:]_.-]+\\.[[:alpha:]][[:alnum:]]+(:[0-9]+)?([^[:alnum:]_]|$)|:[0-9]+([^[:digit:]]|$)"))
      | "\($finding.id): title must not contain file paths or line numbers"),
     (all_findings as $finding
      | select(($finding | type) == "object")
@@ -97,8 +97,8 @@ else
     ((.findings.security[]? // empty) as $finding
      | select($finding.class == "vulnerability")
      | select(($finding.cvss | type) != "string"
-              or ($finding.cvss | startswith("CVSS-B:4.0/") | not))
-     | "\($finding.id): vulnerability cvss must be a CVSS-B:4.0/ vector"),
+              or ($finding.cvss | startswith("CVSS:4.0/") | not))
+     | "\($finding.id): vulnerability cvss must be a CVSS:4.0/ vector"),
     ((.findings.security[]? // empty) as $finding
      | select($finding.class == "vulnerability")
      | select(($finding.cvss_nomenclature | IN("CVSS-B", "CVSS-BT", "CVSS-BTE")) | not)

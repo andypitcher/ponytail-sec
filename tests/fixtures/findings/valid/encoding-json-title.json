@@ -1,0 +1,16 @@
+{
+  "schema_version": 3,
+  "findings": {
+    "code": [],
+    "dependency": [
+      {
+        "id": "D1",
+        "type": "dependency",
+        "title": "Replace gjson with encoding/json for one field read",
+        "break_risk": "Low",
+        "status": "open"
+      }
+    ],
+    "security": []
+  }
+}

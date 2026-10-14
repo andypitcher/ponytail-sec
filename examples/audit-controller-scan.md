@@ -46,7 +46,7 @@ load the pool per-dial; the cost is negligible next to the TLS handshake.
 
 ```
 Vectors:
-  S1  CVSS-B:4.0/AV:A/AC:L/AT:N/PR:L/UI:N/VC:H/VI:H/VA:H/SC:N/SI:N/SA:N
+  S1  CVSS:4.0/AV:A/AC:L/AT:N/PR:L/UI:N/VC:H/VI:H/VA:H/SC:N/SI:N/SA:N
 ```
 
 `kill-chain: 3 paths found.`
@@ -127,7 +127,7 @@ Findings saved to `.ponytail-sec/audit-20260911-143022-Xk9mQ2`.
         "severity": "High",
         "cvss_nomenclature": "CVSS-B",
         "cvss_score": 8.1,
-        "cvss": "CVSS-B:4.0/AV:A/AC:L/AT:N/PR:L/UI:N/VC:H/VI:H/VA:H/SC:N/SI:N/SA:N",
+        "cvss": "CVSS:4.0/AV:A/AC:L/AT:N/PR:L/UI:N/VC:H/VI:H/VA:H/SC:N/SI:N/SA:N",
         "stage": "3 · Exec",
         "location": "internal/exec/manager.go:34",
         "tags": ["inject"],
