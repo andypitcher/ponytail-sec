@@ -101,25 +101,27 @@ Three passes, in order:
                   Prefer: remove > stdlib > vendor > immutable pin > keep floating.
 
 3. Security       Four stages, top-to-bottom. Stage 1 break voids all below.
-   findings       Three kinds, same table, ranked together:
-                    · kind: vulnerability — an exploitable weakness in code you
-                      own: privesc, auth bypass, injection, path traversal.
-                    · kind: hardening — a control missing or too loose (ungated
-                      debug endpoint, RBAC wildcard, missing TLS). Nothing is
-                      broken; you'd rather it did less.
-                    · kind: secret — credential material where it shouldn't be.
+   findings       Three classes, same table, ranked together:
+                    · Vulnerability — an exploitable weakness, including exposed
+                      credential material; persisted as class: vulnerability.
+                    · CVE — a vulnerability with a known CVE identifier.
+                    · Hardening — a missing or overly broad control. Nothing is
+                      broken; you'd rather it did less. Requires a CWE.
                   Rank within each stage by attacker leverage removed ÷ lines changed.
                   The smallest change that ruins an attacker's day wins.
-                  Default output: up to 3 material findings total; no padding. More only on request.
+                  Audit reports all findings; companion review defaults to 3
+                  material findings. No padding.
 ```
 
 Report only what breaks an attack path. Security theater goes unreported.
 
 ## Kill-chain stages
 
-Every security finding lands in one stage, tagged `vulnerability`, `hardening`,
-or `secret`. The triage is practical, not forensic — it's there so you can sort
-"there's a way in" from "tighten this", not to be a taxonomy.
+Every security finding lands in one stage. Report classes are `Vulnerability`,
+`CVE`, or `Hardening`; persist vulnerabilities (including secrets and CVE-bearing
+findings) with `class: "vulnerability"`. The triage is practical, not forensic —
+it's there so you can sort "there's a way in" from "tighten this", not to be a
+taxonomy.
 
 ```
 Stage 1 · Trust      Can the attacker forge or bypass identity?

@@ -255,8 +255,8 @@ license: MIT
   > `S1` is the critical path — a network-adjacent attacker who MITMs the
   > manager→controller link owns the entire cluster before auth is checked.
   > `S2` becomes exploitable from anywhere that can reach the actor, and lives
-  > in a class Pass 1 already recommends deleting outright. `S3` is scored High
-  > but has no day-to-day exploit path if your build network is isolated.
+  > in a class Pass 1 already recommends deleting outright. `S3` has high
+  > efficacy but no day-to-day exploit path if your build network is isolated.
   >
   > If I were you I'd start with `S1` and `S2` — deleting the actor closes `S2`
   > and shrinks the surface `S4` sits on. `S3` is a sprint item not a hotfix;
@@ -266,7 +266,7 @@ license: MIT
   > attacker does with it, or a concrete fix — just ask by number.
 
   When the user asks about a finding by number, emit:
-  - **Root cause** — 1 sentence. Append the CVSS 4.0 vector already computed for
+  - **Root cause** — 1 sentence. Append the CVSS-B 4.0 vector already computed for
     the table on the same line; do not recompute it.
   - **Exploit scenario** — 1 sentence: what the attacker does and what they gain.
   - **Fix** — invoke ponytail on the affected file/snippet for the minimal diff.

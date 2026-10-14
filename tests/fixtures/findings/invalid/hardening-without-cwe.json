@@ -1,0 +1,18 @@
+{
+  "schema_version": 3,
+  "findings": {
+    "code": [],
+    "dependency": [],
+    "security": [
+      {
+        "id": "S1",
+        "type": "security",
+        "class": "hardening",
+        "title": "Wildcard Secret access exceeds controller needs",
+        "efficacy": "High",
+        "break_risk": "High",
+        "status": "open"
+      }
+    ]
+  }
+}
