@@ -19,7 +19,9 @@ license: MIT
   When previous reports exist, read the most recent `findings.json` and compare
   with the current scan results. `findings.json` holds three typed buckets —
   `code`, `dependency`, `security`. Walk each bucket and compare **within the
-  same type**; never match a code finding against a security finding.
+  same type**; never match a code finding against a security finding. If its
+  `schema_version` is 2, migrate it to v3 as described under Persistence before
+  computing deltas or carrying findings forward.
 
   - **Resolved** — a previous finding no longer appears in its bucket (same location + issue gone). Mark it ✅.
   - **Recurring** — same bucket, same location, same issue still present. Mark it 🔁.
@@ -56,12 +58,12 @@ license: MIT
   in every pass carries one — code, dependency, and security alike.
 
   - **Low** — additive, or provably-unused removal (nothing references it). Apply freely.
-  - **Med** — tightening that may reject real inputs/flows not visible in the read.
+  - **Medium** — tightening that may reject real inputs/flows not visible in the read.
   - **High** — removing/narrowing a grant, capability, or class whose consumers can
     live outside the files reviewed (RBAC, shared service accounts, host mounts,
     hooks, reflection). Static review is blind here.
 
-  Med/High findings of **any type** carry the ⚠️ validate-at-runtime line below.
+  Medium/High findings of **any type** carry the ⚠️ validate-at-runtime line below.
 
   ## Three passes, in order
 
@@ -103,7 +105,7 @@ license: MIT
 
   Tags: `auth` `rbac` `isolate` `dep` `inject` `secret` `expose`
 
-  Every security finding carries a **kind**. The triage is practical, not
+  Every security finding carries a **class**. The triage is practical, not
   forensic — it exists so a reader can sort "there's a way in" from
   "tighten this":
 
@@ -113,7 +115,13 @@ license: MIT
   - `hardening` — a control is missing or too loose (ungated debug endpoint,
     RBAC wildcard, missing TLS). Nothing is broken; you would rather it did
     less. The fix is a small diff.
-  - `secret` — hardcoded credential or token material.
+  - `secret` — hardcoded credential or token material. Persist secrets as
+    `class: "vulnerability"`.
+
+  In report tables, use `Vulnerability` for exploitable weaknesses, `CVE` for a
+  vulnerability with a known CVE identifier, and `Hardening` for a missing or
+  overly broad control. Persist both `Vulnerability` and `CVE` as
+  `class: "vulnerability"`; include the `cve` identifier only for the latter.
 
   **Published CVEs in third-party dependencies are out of scope.** Do not
   enumerate advisories for packages this project consumes. That boundary is
@@ -177,14 +185,14 @@ license: MIT
   - **Security posture** — `SECURITY.md`, advisory handling, responsiveness.
   - **OpenSSF Scorecard** — maintained score and any standout risk signals.
   - **Action** — exact replacement, vendoring/forking plan, or immutable pinning.
-  - **Break-risk** — an immutable pin is Low; `remove`/`vendor` is Med or High.
+  - **Break-risk** — an immutable pin is Low; `remove`/`vendor` is Medium or High.
 
   Example:
   > `D1` **Insecure artifact resolvers enable build-network MITM**
   > `build.sbt` HTTP resolvers (spray.io, bintray, sonatype staging,
   > download.java.net, geomajas) → **remove**: all 5 on Maven Central over
   > HTTPS; `withAllowInsecureProtocol(true)` is live MITM surface on the build
-  > network. **Break-risk: Med** — an artifact may resolve only from one of them.
+  > network. **Break-risk: Medium** — an artifact may resolve only from one of them.
 
   ---
 
@@ -192,31 +200,35 @@ license: MIT
 
   All findings, numbered (`S1`, `S2` …), stage order.
 
-  Severity is the CVSS 4.0 qualitative label (Critical / High / Medium / Low)
-  with numeric score in parentheses. Every security finding gets a score —
-  hardening gaps are scored on what an attacker gains if the gap is exploited in
-  combination with other weaknesses. No separate classification: the score is
-  the signal.
+  Vulnerabilities use a CVSS-B severity (`Critical`, `High`, `Medium`, or `Low`)
+  and base score. Hardening uses categorical efficacy (`High`, `Medium`, or
+  `Low`) and requires a CWE. Vulnerabilities must not have a CWE or efficacy;
+  hardening must not have severity or CVSS fields.
 
-  Compute the full CVSS 4.0 vector **now**, at table time, for every finding —
-  it must be persisted to `findings.json`, so it cannot be deferred to `expand N`.
+  Compute the full CVSS-B 4.0 vector **now**, at table time, for every
+  vulnerability — it must be persisted to `findings.json`, so it cannot be
+  deferred to `expand N`. Severity must match its score: ≥9 Critical, ≥7 High,
+  ≥4 Medium, and >0 Low.
 
-  | #  | Sev            | Title | Kind          | Stage     | Location | Finding | Fix | Break-risk |
-  |----|----------------|-------|---------------|-----------|----------|---------|-----|-----------|
-  | S1 | Critical (9.3) | Certificate validation bypass enables HTTPS man-in-the-middle attacks | vulnerability | 1 · Trust | `ClientSslConfig.scala:43` | `auth` `DummyTrustManager` — `checkServerTrusted()` no-op; all manager→controller HTTPS MITMable | Load CA cert into real `TrustManagerFactory` | Low |
-  | S2 | High (8.1)     | Shell interpolation allows arbitrary command execution | vulnerability | 3 · Exec  | `ProcessManager.scala:34` | `inject` actor message interpolated into `bash -i` — any sender achieves RCE | Replace with `ProcessBuilder`, no shell | Med |
-  | S3 | High (7.4)     | Wildcard Secret access exceeds controller authorization needs | hardening     | 2 · Authz | `rbac.yaml:30` | `rbac` operator SA granted `secrets: ["*"]`; no code path reads Secrets | Drop the grant | High |
-  | S4 | Medium (6.5)   | Default Grafana password exposes a committed credential | secret        | 4 · Data  | `charts/values.yaml:12` | `secret` default Grafana admin password committed in chart values | Move to a Secret ref; fail closed if unset | Med |
+  For any known CVE, use `CVE` as the table Class and include its `cve` identifier
+  in persisted JSON; it remains a vulnerability for schema and score validation.
+
+  | #  | Class         | Rating                          | Stage     | Location | Finding | Fix | Break-risk |
+  |----|---------------|---------------------------------|-----------|----------|---------|-----|-----------|
+  | S1 | Vulnerability | Severity: Critical (CVSS-B 9.3) | 1 · Trust | `ClientSslConfig.scala:43` | `[auth]` `DummyTrustManager` — `checkServerTrusted()` no-op; all manager→controller HTTPS MITMable | Load CA cert into real `TrustManagerFactory` | Low |
+  | S2 | Vulnerability | Severity: High (CVSS-B 8.1)     | 3 · Exec  | `ProcessManager.scala:34` | `[inject]` actor message interpolated into `bash -i` — any sender achieves RCE | Replace with `ProcessBuilder`, no shell | Medium |
+  | S3 | Hardening     | Efficacy: High                  | 2 · Authz | `rbac.yaml:30` | `[rbac · CWE-269]` operator SA granted `secrets: ["*"]`; no code path reads Secrets | Drop the grant | High |
+  | S4 | Vulnerability | Severity: Medium (CVSS-B 6.5)   | 4 · Data  | `charts/values.yaml:12` | `[secret]` default Grafana admin password committed in chart values | Move to a Secret ref; fail closed if unset | Medium |
 
   Emit the computed vectors immediately below the table, one per line — not as a
   column, which would make the table unreadable:
 
   ```
   Vectors:
-    S1  CVSS:4.0/AV:N/AC:L/AT:N/PR:N/UI:N/VC:H/VI:H/VA:H/SC:H/SI:H/SA:H
-    S2  CVSS:4.0/AV:A/AC:L/AT:N/PR:L/UI:N/VC:H/VI:H/VA:H/SC:N/SI:N/SA:N
-    S3  CVSS:4.0/AV:N/AC:L/AT:N/PR:L/UI:N/VC:H/VI:H/VA:N/SC:N/SI:N/SA:N
-    S4  CVSS:4.0/AV:N/AC:L/AT:N/PR:N/UI:N/VC:H/VI:L/VA:N/SC:N/SI:N/SA:N
+    S1  CVSS-B:4.0/AV:N/AC:L/AT:N/PR:N/UI:N/VC:H/VI:H/VA:H/SC:H/SI:H/SA:H
+    S2  CVSS-B:4.0/AV:A/AC:L/AT:N/PR:L/UI:N/VC:H/VI:H/VA:H/SC:N/SI:N/SA:N
+    S3  CVSS-B:4.0/AV:N/AC:L/AT:N/PR:L/UI:N/VC:H/VI:H/VA:N/SC:N/SI:N/SA:N
+    S4  CVSS-B:4.0/AV:N/AC:L/AT:N/PR:N/UI:N/VC:H/VI:L/VA:N/SC:N/SI:N/SA:N
   ```
 
   Severity = impact if exploited. Break-risk is orthogonal — see the section above.
@@ -283,7 +295,7 @@ license: MIT
      in three typed buckets. Schema:
      ```json
      {
-       "schema_version": 2,
+       "schema_version": 3,
        "findings": {
          "code": [
            {
@@ -324,10 +336,9 @@ license: MIT
              "id": "S1",
              "title": "pprof debug endpoint enabled unconditionally in controller",
              "type": "security",
-             "kind": "hardening",
-             "severity": "Medium (4.6)",
-             "cvss_score": 4.6,
-             "cvss_vector": "CVSS:4.0/AV:L/AC:L/AT:N/PR:H/UI:N/VC:L/VI:N/VA:L/SC:N/SI:N/SA:N",
+             "class": "hardening",
+             "efficacy": "Medium",
+             "cwe": "CWE-1188",
              "stage": "4 · Data",
              "location": "internal/cmd/controller/root.go:147",
              "tags": ["expose"],
@@ -340,16 +351,17 @@ license: MIT
              "id": "S2",
              "title": "Job name injected into shell command allows command execution",
              "type": "security",
-             "kind": "vulnerability",
-             "severity": "High (8.1)",
+             "class": "vulnerability",
+             "severity": "High",
              "cvss_score": 8.1,
-             "cvss_vector": "CVSS:4.0/AV:A/AC:L/AT:N/PR:L/UI:N/VC:H/VI:H/VA:H/SC:N/SI:N/SA:N",
+             "cvss_nomenclature": "CVSS-B",
+             "cvss": "CVSS-B:4.0/AV:A/AC:L/AT:N/PR:L/UI:N/VC:H/VI:H/VA:H/SC:N/SI:N/SA:N",
              "stage": "3 · Exec",
              "location": "internal/exec/manager.go:34",
              "tags": ["inject"],
              "finding": "Job name is interpolated into a shell command string passed to sh -c; any caller that controls the name achieves command execution",
              "fix": "Use exec.Command with an argument slice; drop the shell",
-             "break_risk": "Med",
+             "break_risk": "Medium",
              "status": "open"
            }
          ]
@@ -358,15 +370,19 @@ license: MIT
      ```
      - `status` is always `"open"` for new findings.
      - IDs carry their type prefix (`C`/`D`/`S`) and match the report tables.
-     - `kind` is one of `vulnerability`, `hardening`, `secret`.
-     - `cvss_score` is a JSON **number**, not a string, and must agree with the
-       score in the `severity` label.
-     - `cvss_vector` is the full CVSS 4.0 vector string, prefixed `CVSS:4.0/`,
-       and is the same vector printed under the report table.
-     - **CVSS fields apply to `security` findings only.** Never invent a
-       `cvss_score` or `cvss_vector` for a code or dependency finding — those
-       carry `break_risk` (and, for deps, `verdict`) as their signal. A
-       fabricated score is worse than no score.
+     - `class` is `vulnerability` or `hardening`; a hardcoded secret is a
+       vulnerability. A known CVE is a vulnerability with a `cve` string.
+     - A vulnerability requires `severity` (`Critical`, `High`, `Medium`, or
+       `Low`), numeric `cvss_score`, `cvss_nomenclature` (`CVSS-B`; triage may
+       later set `CVSS-BT` or `CVSS-BTE`), and `cvss` (the full vector prefixed
+       `CVSS-B:4.0/`). Severity must match the CVSS-B 4.0 score band: ≥9
+       Critical, ≥7 High, ≥4 Medium, and >0 Low.
+     - A vulnerability must not have `efficacy`, `cwe`, or `efficacy_score`.
+       Hardening requires `efficacy` (`High`, `Medium`, or `Low`) and a `cwe`
+       string such as `CWE-269`; it must not have severity, CVSS fields,
+       `efficacy_score`, or `cve`.
+     - CVSS, efficacy, and CWE fields do not apply to code/dependency findings.
+       Never invent them for these findings.
      - `break_risk` is required on every finding of every type.
      - `title` is required on every finding of every type. Keep it to about 80
        characters and no more than 100, on one line, with no trailing period.
@@ -376,6 +392,24 @@ license: MIT
        when the dep is unpinned.
      - Each bucket may be an empty array, but always emit all three keys.
      - Validate: the file must be valid JSON (no trailing commas, no comments).
+
+     #### Migration v2 → v3
+
+     Before computing deltas or carrying findings forward, migrate a v2 scan
+     in memory:
+     - `kind: "vulnerability"` or `kind: "secret"` becomes
+       `class: "vulnerability"`.
+     - Split `severity: "High (8.1)"` into `severity: "High"` and numeric
+       `cvss_score: 8.1`; add `cvss_nomenclature: "CVSS-B"`.
+     - Rename `cvss_vector` to `cvss`.
+     - Convert `Med` to `Medium` in `break_risk` and categorical values.
+     - `kind: "hardening"` becomes `class: "hardening"`; remove severity,
+       CVSS, and efficacy-score fields, but keep `status`. Re-judge `efficacy`
+       and `cwe` fresh; never derive either from the old score.
+     - If `title` is missing, generate it from `finding` following the title
+       rules above.
+     - Mark a carried hardening finding:
+       `🔁 recurring — migrated from v2, efficacy re-judged`.
 
   5. Compute the integrity digest of `findings.json`. Do this **after** the file
      is written and final — the digest covers `findings.json` only, never
@@ -421,7 +455,7 @@ license: MIT
   7. Write `${SCAN_DIR}/meta.json`:
      ```json
      {
-       "schema_version": 2,
+       "schema_version": 3,
        "timestamp": "2026-08-24T15:30:00Z",
        "commit": "<output of git rev-parse HEAD>",
        "branch": "<output of git branch --show-current>",
@@ -447,8 +481,8 @@ license: MIT
      ```
      - `commit` and `branch` come from git commands, not hardcoded.
      - `finding_count` counts each bucket; `total` is their sum.
-     - `max_cvss_score` is the highest `cvss_score` across security findings,
-       or `null` when there are none.
+     - `max_cvss_score` is the highest `cvss_score` across vulnerability
+       security findings only, or `null` when there are none.
      - `findings_sha256` is the digest from step 5 — lowercase hex, no filename suffix. During a subsequent scan, the system must read this digest and recompute the hash of the existing `findings.json` before proceeding to compare buckets. This explicit integrity check detects if a committed `findings.json` was hand-edited after the fact, and lets the delta comparison safely skip re-reading an unchanged file.
      - `usage.source` records provenance: `"ccusage"`, `"runtime"`, or
        `"unavailable"`. When unavailable, emit the block with every numeric
@@ -483,7 +517,7 @@ license: MIT
   jobs, reflection, service accounts borrowed by other components. A grant — or a
   class — that looks dead may be load-bearing.
 
-  So every **Med/High break-risk** finding, in **any** of the three passes, gets
+  So every **Medium/High break-risk** finding, in **any** of the three passes, gets
   this line appended; skip it for Low-risk findings that only add a control:
 
   > ⚠️ Static analysis only — validate at runtime. Apply the fix and run it (build +

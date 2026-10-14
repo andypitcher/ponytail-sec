@@ -163,18 +163,19 @@ directly or say "harden this", "security review", "is this dep safe",
 Examples: [new service](https://github.com/andypitcher/ponytail-sec/blob/main/examples/companion-diagnostic-service.md) ·
 [dependency](https://github.com/andypitcher/ponytail-sec/blob/main/examples/companion-jexl-dep.md).
 
-**`/ponytail-sec-audit`** — Full project scan. All findings in one table with a
-`Class` column and a `Rating` column, each measured by what it actually is:
-vulnerabilities are `Vulnerability` (or `CVE`) and carry a severity and a
-CVSS 4.0 base score (`Severity: High (8.1)`); hardening items are `Hardening`
-and carry an efficacy — how much attacker leverage the fix removes, as a
-`High`/`Medium`/`Low` judgement rather than a number (`Efficacy: High`) — plus
-a CWE, shown as a badge in the finding cell. No severity and no score on a
-hardening item, because a base score on a documented default is
-impact-dominated and misranks the table. Ends with a blast-radius
-narrative and a frank "if I were you" prioritisation that may differ from the
-score order. Invoke directly or say "full security audit", "audit the project",
-"security scan".
+**`/ponytail-sec-audit`** — Full project scan. Security findings use one table
+with `# · Class · Rating · Stage · Location · Finding · Fix · Break-risk`.
+Vulnerabilities are `Vulnerability` (or `CVE` when a CVE is known) and carry a
+CVSS-B 4.0 severity and base score (`Severity: High (CVSS-B 8.1)`); hardening
+items are `Hardening` and carry an efficacy — how much attacker leverage the
+fix removes — as a `High`/`Medium`/`Low` judgement (`Efficacy: High`) plus a
+required CWE badge in the finding cell. Hardening has no severity or CVSS
+fields, and vulnerabilities have no CWE or efficacy fields. Every finding in
+every pass has a short title for issue tracking. Findings persist as schema v3
+JSON, with non-applicable keys omitted. Ends with a blast-radius narrative and
+a frank "if I were you" prioritisation that may differ from the score order.
+Invoke directly or say "full security audit", "audit the project", "security
+scan".
 
 Example: [full audit with persisted findings](https://github.com/andypitcher/ponytail-sec/blob/main/examples/audit-controller-scan.md).
 
