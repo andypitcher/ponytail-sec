@@ -12,7 +12,8 @@ audit exists at `.ponytail-sec/audit-20260902-091455-a7Kd2p`.
 
 ### Pass 1 · Code
 
-`C1` `internal/ssl/client.go`: `sync.Once` caches the CA cert pool at first
+`C1` **Cached CA cert pool ignores CA rotation until process restart**
+`internal/ssl/client.go`: `sync.Once` caches the CA cert pool at first
 request, so a CA rotation is silent until the process restarts — revoked
 intermediates stay trusted for the life of the pod. Drop the `sync.Once` and
 load the pool per-dial; the cost is negligible next to the TLS handshake.
@@ -22,7 +23,8 @@ load the pool per-dial; the cost is negligible next to the TLS handshake.
 
 ### Pass 2 · Dependencies
 
-`D1` `github.com/tidwall/gjson v1.14.0`
+`D1` **Solo-maintained gjson dependency replaceable by stdlib encoding/json**
+`github.com/tidwall/gjson v1.14.0`
 
 - **Verdict** — **stdlib**.
 - **Upstream** — `https://pkg.go.dev/github.com/tidwall/gjson@v1.14.0` (pinned).
@@ -36,15 +38,17 @@ load the pool per-dial; the cost is negligible next to the TLS handshake.
 
 ### Pass 3 · Security findings
 
-| #  | Class | Rating | Stage | Location | Finding | Fix | Break-risk |
-|----|-------|--------|-------|----------|---------|-----|-----------|
-| S1 | Vulnerability | Severity: High (8.1) | 3 · Exec | `internal/exec/manager.go:34` | `[inject]` job name interpolated into a command string passed to `sh -c`; any caller controlling the name gets execution | Use `exec.Command` with an argument slice; drop the shell | Medium |
-| S2 | Hardening | Efficacy: High | 2 · Authz | `deploy/rbac.yaml:30` | `[rbac · CWE-269]` controller SA granted `secrets: ["*"]`; no handler reads Secrets | Drop the grant | High |
-| S3 | Hardening | Efficacy: Medium | 4 · Data | `internal/cmd/controller/root.go:147` | `[expose · CWE-1188]` `net/http/pprof` on `localhost:6060` starts unconditionally, while the agent gates the identical block behind `FLEET_AGENT_PPROF_DISABLED` | Apply the same env gate the agent already uses | Low |
+| #  | Sev            | Title | Kind          | Stage     | Location | Finding | Fix | Break-risk |
+|----|----------------|-------|---------------|-----------|----------|---------|-----|-----------|
+| S1 | High (8.1)     | Job name injected into shell command allows command execution | vulnerability | 3 · Exec  | `internal/exec/manager.go:34` | `inject` job name interpolated into a command string passed to `sh -c`; any caller controlling the name gets execution | Use `exec.Command` with an argument slice; drop the shell | Med |
+| S2 | High (7.4)     | Controller ServiceAccount granted wildcard access to all Secrets | hardening     | 2 · Authz | `deploy/rbac.yaml:30` | `rbac` controller SA granted `secrets: ["*"]`; no handler reads Secrets | Drop the grant | High |
+| S3 | Medium (4.6)   | pprof debug endpoint enabled unconditionally in controller | hardening     | 4 · Data  | `internal/cmd/controller/root.go:147` | `expose` `net/http/pprof` on `localhost:6060` starts unconditionally, while the agent gates the identical block behind `FLEET_AGENT_PPROF_DISABLED` | Apply the same env gate the agent already uses | Low |
 
 ```
 Vectors:
-  S1  8.1  CVSS:4.0/AV:A/AC:L/AT:N/PR:L/UI:N/VC:H/VI:H/VA:H/SC:N/SI:N/SA:N
+  S1  CVSS:4.0/AV:A/AC:L/AT:N/PR:L/UI:N/VC:H/VI:H/VA:H/SC:N/SI:N/SA:N
+  S2  CVSS:4.0/AV:N/AC:L/AT:N/PR:L/UI:N/VC:H/VI:H/VA:N/SC:N/SI:N/SA:N
+  S3  CVSS:4.0/AV:L/AC:L/AT:N/PR:H/UI:N/VC:L/VI:N/VA:L/SC:N/SI:N/SA:N
 ```
 
 `kill-chain: 3 paths found.`
@@ -52,25 +56,15 @@ Vectors:
 `S1` is the only finding here where something is actually broken — a job name
 reaching `sh -c` is execution in the controller's context, and the controller
 holds the very grant `S2` describes, so the two compound. `S2` and `S3` are both
-pre-existing hardening items, both 🔁 recurring from the last audit and neither
-carrying a severity: the RBAC grant and the pprof listener behave as documented,
-so a base score on them would be impact-dominated and would outrank `S1`. They
-carry an efficacy label instead — how much the fix takes away from an
-attacker, as a judgement rather than a number that would read as commensurable
-with `S1`'s. `S3` is interesting less for its efficacy than for the
-inconsistency: the agent
-already gates pprof, so the controller is the odd one out and the fix is a
-copy-paste of code you own. The controller's namespace-wide watch is the shipped trust model,
-not a finding — that watch is the perimeter. `S1`'s 8.1 is CVSS 4.0 base, so it
-assumes the worst case for everything the repo doesn't tell me about your
-deployment.
+pre-existing and both 🔁 recurring from the last audit. `S3` is interesting less
+for its score than for the inconsistency: the agent already gates pprof, so the
+controller is the odd one out and the fix is a copy-paste of code you own.
 
 If I were you I'd start with `S1` and `S3` — `S1` because it's the one live
 execution path, `S3` because it's four lines you've already written elsewhere
-and it's been recurring for two scans. `S2` is the higher-efficacy of the two —
-dropping the grant closes Stage 2 outright — but it's the one I'd move slowest
-on: High break-risk, and the last audit's RBAC removals
-are exactly the kind that broke on deploy. Prove it with an e2e run first.
+and it's been recurring for two scans. `S2` scores higher than `S3` but is the
+one I'd move slowest on: High break-risk, and the last audit's RBAC removals are
+exactly the kind that broke on deploy. Prove it with an e2e run first.
 
 ⚠️ Static analysis only — validate at runtime. A component spawned out-of-band
 (job/sidecar/hook) may rely on the `S2` grant; deploy and run one full cycle
@@ -93,6 +87,7 @@ Findings saved to `.ponytail-sec/audit-20260911-143022-Xk9mQ2`.
     "code": [
       {
         "id": "C1",
+        "title": "Cached CA cert pool ignores CA rotation until process restart",
         "type": "code",
         "location": "internal/ssl/client.go:31",
         "finding": "sync.Once caches the CA cert pool at first request; a CA rotation is silent until process restart",
@@ -105,6 +100,7 @@ Findings saved to `.ponytail-sec/audit-20260911-143022-Xk9mQ2`.
     "dependency": [
       {
         "id": "D1",
+        "title": "Solo-maintained gjson dependency replaceable by stdlib encoding/json",
         "type": "dependency",
         "location": "go.mod:24",
         "package": "github.com/tidwall/gjson",
@@ -125,25 +121,28 @@ Findings saved to `.ponytail-sec/audit-20260911-143022-Xk9mQ2`.
     "security": [
       {
         "id": "S1",
+        "title": "Job name injected into shell command allows command execution",
         "type": "security",
-        "class": "vulnerability",
-        "severity": "High",
-        "cvss": "CVSS:4.0/AV:A/AC:L/AT:N/PR:L/UI:N/VC:H/VI:H/VA:H/SC:N/SI:N/SA:N",
+        "kind": "vulnerability",
+        "severity": "High (8.1)",
         "cvss_score": 8.1,
+        "cvss_vector": "CVSS:4.0/AV:A/AC:L/AT:N/PR:L/UI:N/VC:H/VI:H/VA:H/SC:N/SI:N/SA:N",
         "stage": "3 · Exec",
         "location": "internal/exec/manager.go:34",
         "tags": ["inject"],
         "finding": "Job name is interpolated into a shell command string passed to sh -c; any caller that controls the name achieves command execution",
         "fix": "Use exec.Command with an argument slice; drop the shell",
-        "break_risk": "Medium",
+        "break_risk": "Med",
         "status": "open"
       },
       {
         "id": "S2",
+        "title": "Controller ServiceAccount granted wildcard access to all Secrets",
         "type": "security",
-        "class": "hardening",
-        "efficacy": "High",
-        "cwe": "CWE-269",
+        "kind": "hardening",
+        "severity": "High (7.4)",
+        "cvss_score": 7.4,
+        "cvss_vector": "CVSS:4.0/AV:N/AC:L/AT:N/PR:L/UI:N/VC:H/VI:H/VA:N/SC:N/SI:N/SA:N",
         "stage": "2 · Authz",
         "location": "deploy/rbac.yaml:30",
         "tags": ["rbac"],
@@ -154,10 +153,12 @@ Findings saved to `.ponytail-sec/audit-20260911-143022-Xk9mQ2`.
       },
       {
         "id": "S3",
+        "title": "pprof debug endpoint enabled unconditionally in controller",
         "type": "security",
-        "class": "hardening",
-        "efficacy": "Medium",
-        "cwe": "CWE-1188",
+        "kind": "hardening",
+        "severity": "Medium (4.6)",
+        "cvss_score": 4.6,
+        "cvss_vector": "CVSS:4.0/AV:L/AC:L/AT:N/PR:H/UI:N/VC:L/VI:N/VA:L/SC:N/SI:N/SA:N",
         "stage": "4 · Data",
         "location": "internal/cmd/controller/root.go:147",
         "tags": ["expose"],
