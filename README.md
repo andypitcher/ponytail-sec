@@ -22,7 +22,8 @@ narrowed RBAC verb that kills a link in the attack chain. Butterfly effect
 for defense: tiny diffs, outsized reduction in attacker leverage.
 
 A Claude Code plugin for focused security review: `/ponytail-sec` for your
-current diff, `/ponytail-sec-audit` for the whole repo.
+current diff, `/ponytail-sec-audit` for the whole repo, and
+`/ponytail-sec-triage` to prioritize and action audit backlogs.
 
 Same dependency lens as [ponytail](https://github.com/DietrichGebert/ponytail):
 "Do I actually need this dep?" Fewer dependencies = smaller supply-chain
@@ -164,6 +165,13 @@ directly or say "harden this", "security review", "is this dep safe",
 with blast-radius narrative and a frank "if I were you" prioritisation that
 may differ from the score order. Invoke directly or say "full security audit",
 "audit the project", "security scan".
+
+**`/ponytail-sec-triage`** — Triage the backlog from `/ponytail-sec-audit`.
+Evaluates findings across four practical dispositions: Fix Now (hotfixes),
+Sprint (scheduled hardening), Verify First (runtime checks required), and
+Accept (compensated risk). Identifies compound wins and delegates fixes
+to ponytail. Invoke directly or say "triage audit", "triage security findings",
+"triage the scan".
 
 ## Relation
 
