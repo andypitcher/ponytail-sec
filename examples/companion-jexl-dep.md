@@ -27,7 +27,7 @@ a sandboxed expression language evaluator for the Angular frontend.
   control patch response. If it stays, pin to `2.3.0` exactly plus lockfile —
   `^` on an unmaintained solo package means any future publish lands in your
   build unreviewed.
-- **Break-risk: Med** — swapping evaluators may change expression semantics;
+- **Break-risk: Medium** — swapping evaluators may change expression semantics;
   vendoring is behaviour-neutral but shifts maintenance to you.
 
 ⚠️ Static analysis only — validate at runtime. Apply the fix and run it (build +

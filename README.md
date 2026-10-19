@@ -160,14 +160,27 @@ lean output. Ends with Ship or Ship blocked — nothing in between. Invoke
 directly or say "harden this", "security review", "is this dep safe",
 "reduce attack surface".
 
-**`/ponytail-sec-audit`** — Full project scan. All findings, CVSS 4.0 scored,
-with blast-radius narrative and a frank "if I were you" prioritisation that
-may differ from the score order. Invoke directly or say "full security audit",
-"audit the project", "security scan".
+Examples: [new service](https://github.com/andypitcher/ponytail-sec/blob/main/examples/companion-diagnostic-service.md) ·
+[dependency](https://github.com/andypitcher/ponytail-sec/blob/main/examples/companion-jexl-dep.md).
+
+**`/ponytail-sec-audit`** — Full project scan. Security findings share one table
+with `# · Class · Rating · Stage · Location · Finding · Fix · Break-risk`.
+Vulnerabilities are `Vulnerability` (or `CVE`) and carry a severity and a
+CVSS 4.0 base score, labelled with its FIRST nomenclature
+(`Severity: High (CVSS-B 8.1)`); hardening items are `Hardening` and carry an
+efficacy — how much attacker leverage the fix removes, as a `High`/`Medium`/`Low`
+judgement (`Efficacy: High`) — plus a required CWE, shown as a badge in the
+finding cell. Vulnerabilities measure how much it hurts; hardening measures how
+well the fix protects. Every finding in every pass has a short title for issue
+tracking, and findings persist as schema v3 JSON. Ends with a blast-radius
+narrative and a frank "if I were you" prioritisation that may differ from the
+score order. Invoke directly or say "full security audit", "audit the project",
+"security scan".
+
+Example: [full audit with persisted findings](https://github.com/andypitcher/ponytail-sec/blob/main/examples/audit-controller-scan.md).
 
 ## Relation
 
-Part of the [ponytail](https://github.com/DietrichGebert/ponytail) skill
-family. Same voice, security lens.
+Inspired from [Ponytail](https://github.com/DietrichGebert/ponytail) plugin. Same voice, security lens.
 
 MIT license.
