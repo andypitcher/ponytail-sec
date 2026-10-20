@@ -22,7 +22,8 @@ narrowed RBAC verb that kills a link in the attack chain. Butterfly effect
 for defense: tiny diffs, outsized reduction in attacker leverage.
 
 A Claude Code plugin for focused security review: `/ponytail-sec` for your
-current diff, `/ponytail-sec-audit` for the whole repo.
+current diff, `/ponytail-sec-audit` for the whole repo, and
+`/ponytail-sec-triage` to review findings with context.
 
 Same dependency lens as [ponytail](https://github.com/DietrichGebert/ponytail):
 "Do I actually need this dep?" Fewer dependencies = smaller supply-chain
@@ -178,6 +179,17 @@ score order. Invoke directly or say "full security audit", "audit the project",
 "security scan".
 
 Example: [full audit with persisted findings](https://github.com/andypitcher/ponytail-sec/blob/main/examples/audit-controller-scan.md).
+
+**`/ponytail-sec-triage [IDs | pasted finding] [--scan <dir>] [--output file|shell|both]`**
+— Review selected schema v3 audit findings, all untriaged findings, or a pasted
+finding without a scan. Lists repository context, then offers up to five
+finding-specific questions, free-text notes, or skip. Detects existing `gh`
+for published repository advisory candidates; installs nothing. Answers are
+recorded as `user: <answer>` entries in each report's `context:` list.
+Writes per-finding `triage/<ID>.triage.md` reports by default; `shell` writes
+nothing, and `both` writes and prints. Leaves audit files unchanged.
+Requires Python 3's standard library for scan discovery and integrity checks.
+Schema v2 scans must be re-run with `/ponytail-sec-audit`, not migrated.
 
 ## Relation
 

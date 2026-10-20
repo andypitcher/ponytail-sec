@@ -9,7 +9,8 @@
   "plugins": [
     {
       "name": "ponytail-sec",
-      "description": "Butterfly-effect security pass: finds the smallest diff that breaks the attack chain. Lists findings, applies nothing.",
+      "version": "0.2.6",
+      "description": "Security companion, full-project audit, and context-aware triage. Finds the smallest diff that breaks the attack chain; applies nothing.",
       "source": "./",
       "category": "security"
     }
