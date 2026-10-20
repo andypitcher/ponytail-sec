@@ -331,7 +331,14 @@ license: MIT
   but because of their real-world leverage. Be direct: "I'd start with `S1`
   because…"
 
-  End with one conversational sentence inviting the user to dig deeper.
+  If open security findings remain, end with:
+
+  > N open findings (X vulnerability, Y hardening), M with Medium/High break
+  > risk that need runtime verification. Want me to run `/ponytail-sec-triage`
+  > on them? `all`, pick by number (e.g. `S1`), or `no`.
+
+  `all` or IDs start triage; a question about a finding gets the short answer
+  below.
 
   Example closing:
   > `S1` is the critical path — a network-adjacent attacker who MITMs the
@@ -348,10 +355,11 @@ license: MIT
   > chart default closes Stage 1 for every install. `S4` is a sprint item, not a
   > hotfix; your build isolation is likely compensating.
   >
-  > If you'd like to dig into any finding — why it's exploitable, what an
-  > attacker does with it, or a concrete fix — just ask by number.
+  > 4 open findings (2 vulnerability, 2 hardening), 3 with Medium/High break
+  > risk that need runtime verification. Want me to run `/ponytail-sec-triage`
+  > on them? `all`, pick by number (e.g. `S1`), or `no`.
 
-  When the user asks about a finding by number, emit:
+  When the user asks about a finding by number instead, emit:
   - **Root cause** — 1 sentence. For a vulnerability, append the labelled
     CVSS-B score and vector already computed for the table on the same line;
     do not recompute it. For a hardening finding there is no vector — append
@@ -628,6 +636,10 @@ license: MIT
     tool's file-write capability, not `echo` or `cat <<EOF`.
   - The `.ponytail-sec/` directory should be committed to the repository so
     findings travel with the code. Recommend the user `git add .ponytail-sec/`.
+    Exception: when the scan has open `vulnerability` findings in released
+    code, it is an undisclosed security report. Tell the user not to commit
+    that scan directory, or open public issues or PRs from it, until the
+    fixes ship or an advisory is published.
 
   ## Validation caveat — attach to removal/tightening findings
 
