@@ -9,7 +9,6 @@
   "plugins": [
     {
       "name": "ponytail-sec",
-      "version": "0.2.6",
       "description": "Security companion, full-project audit, and context-aware triage. Finds the smallest diff that breaks the attack chain; applies nothing.",
       "source": "./",
       "category": "security"

@@ -39,7 +39,7 @@ license: MIT
   `THREAT_MODEL.md` / `threat-model.md`, files under `docs/security/`, and
   Helm values / deployment manifests. Say when none are found.
   If `command -v gh` succeeds, use the repo's owner/name to list published
-  security advisories with `gh api --paginate repos/<owner>/<repo>/security-advisories`,
+  security advisories with `gh api --paginate 'repos/<owner>/<repo>/security-advisories?state=published'`,
   showing candidate titles and URLs, not asserting matches. Never install
   `gh`; if unavailable or access fails, say so and continue.
 
