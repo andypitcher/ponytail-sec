@@ -34,10 +34,15 @@ for file in "${files[@]}"; do
   tdir=$(dirname "$file")
   # Evidence files that exist, relative to triage/, are passed as data.
   evidence=()
-  while IFS= read -r e; do evidence+=("${e#"$tdir"/}"); done < <(
-    find "$tdir" -mindepth 2 -type f)
+  evidence_files='[]'
+  while IFS= read -r -d '' epath; do
+    e=${epath#"$tdir"/}
+    evidence+=("$e")
+    evidence_files=$(jq --arg path "$e" --rawfile content "$epath" \
+      '. + [{path: $path, content: $content}]' <<<"$evidence_files")
+  done < <(find "$tdir" -mindepth 2 -type f -print0)
 
-  result=$(jq -R -s --arg name "${file##*/}" '
+  result=$(jq -R -s --arg name "${file##*/}" --argjson evidence_files "$evidence_files" '
     def unq:
       if test("^\".*\"$") then (try fromjson catch error("bad quoted string: \(.)"))
       else . end;
@@ -127,13 +132,9 @@ for file in "${files[@]}"; do
           (select($f.class == "vulnerability" and ($f.cvss | type) == "string")
            | ($f.cvss | test("/E:[APU](/|$)")) as $t
            | ($f.cvss | test("/(CR|IR|AR|MAV|MAC|MAT|MPR|MUI|MVC|MVI|MVA|MSC|MSI|MSA):[^X/]")) as $e
-           | if $e and ($t | not) then
-               "environmental metrics without E would be CVSS-BE; drop them or set E from a named source"
-             else
-               ("CVSS-B" + (if $t then "T" else "" end) + (if $e then "E" else "" end)) as $want
-               | select($f.cvss_nomenclature != $want)
-               | "cvss_nomenclature must be \($want) for this vector"
-             end),
+           | ("CVSS-B" + (if $t then "T" else "" end) + (if $e then "E" else "" end)) as $want
+           | select($f.cvss_nomenclature != $want)
+           | "cvss_nomenclature must be \($want) for this vector"),
 
           # Hardening measurements.
           (select($f.class == "hardening" and has("efficacy"))
@@ -181,6 +182,17 @@ for file in "${files[@]}"; do
            | select(type == "string") | . as $e
            | select(any($ARGS.positional[]; . == $e) | not)
            | "evidence file not found: \(.)"),
+          (select(($f.evidence | type) == "array") | $f.evidence[]
+           | select(type == "string") as $e
+           | select($e | test("(^|/)poc(/|$)"))
+           | "evidence must not be a PoC source file: \($e)"),
+          (select(($f.evidence | type) == "array") | $f.evidence[]
+           | select(type == "string") as $e
+           | ($evidence_files[] | select(.path == $e) | .content
+              | sub("\\s+$"; "") | split("\n")) as $lines
+           | select((($lines[0] | sub("\\r$"; "") | test("^\\$ .+")) | not)
+                    or (($lines[-1] | sub("\\r$"; "") | test("^exit=[0-9]+$")) | not))
+           | "evidence must begin with a $ <command> header and end with exit=<status>: \($e)"),
 
           (select(has("reclassified_from"))
            | select(($f.reclassified_from | IN("vulnerability", "hardening") | not)

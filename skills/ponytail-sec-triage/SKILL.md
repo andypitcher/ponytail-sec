@@ -184,9 +184,9 @@ license: MIT
       source.
     - Set threat (`E`) and environmental metrics only when a named source
       supports them; otherwise mark them `X (not set)`.
-    - Set `cvss_nomenclature` to `CVSS-B`, `CVSS-BT` or `CVSS-BTE` to match
-      the vector. Severity must fit the score band (≥9 Critical, ≥7 High,
-      ≥4 Medium, >0 Low).
+    - Set `cvss_nomenclature` to `CVSS-B`, `CVSS-BT`, `CVSS-BE` or `CVSS-BTE`
+      to match the vector. Severity must fit the score band (≥9 Critical,
+      ≥7 High, ≥4 Medium, >0 Low).
     - If a CVSS 4.0 calculator CLI is already on PATH (e.g.
       `cvss_calculator -4 -v <vector>`), use it to check the score. Detect
       only; never install. Otherwise include the FIRST calculator link with
@@ -220,8 +220,8 @@ license: MIT
     unverified. A requested PoC goes in `triage/<ID>/poc/`.
   - **Disclosure.** An `affected` vulnerability in released code is an
     undisclosed security report: §6 and §7 show how to exploit it. Tell the
-    user not to commit `triage/<ID>.triage.md` or `triage/<ID>/`, or open
-    public issues or PRs from them, until the advisory is published.
+    user not to commit anything in `triage/`, or open public issues or PRs
+    from it, until the advisory is published.
 
   ## Write and check
 

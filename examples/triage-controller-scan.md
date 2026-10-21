@@ -536,8 +536,8 @@ Triage saved:
 
 ```
 ⚠️ S1 is an affected vulnerability in released code (v0.9.0 onward). Do not
-commit triage/S1.triage.md or triage/S1/, or open public issues or PRs from
-them, until the GitHub Security Advisory is published.
+commit anything in triage/, or open public issues or PRs from it, until the
+GitHub Security Advisory is published.
 ```
 
 ```json name=index.json
