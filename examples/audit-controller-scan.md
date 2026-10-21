@@ -76,8 +76,11 @@ that broke on deploy. Prove it with an e2e run first.
 before merging. If it breaks, ask for a narrower grant (scope to one secret
 name, create-only, or a projected token) rather than restoring `["*"]`.
 
-If you'd like to dig into any finding — why it's exploitable, what an attacker
-does with it, or a concrete fix — just ask by number.
+3 open findings (1 vulnerability, 2 hardening), 2 with Medium/High break risk
+that need runtime verification. Want me to run `/ponytail-sec-triage` on them?
+`all`, pick by number (e.g. `S1`), or `no`.
+
+> Answering `all` continues in the [triage walkthrough](triage-controller-scan.md).
 
 ---
 

@@ -22,7 +22,8 @@ narrowed RBAC verb that kills a link in the attack chain. Butterfly effect
 for defense: tiny diffs, outsized reduction in attacker leverage.
 
 A Claude Code plugin for focused security review: `/ponytail-sec` for your
-current diff, `/ponytail-sec-audit` for the whole repo.
+current diff, `/ponytail-sec-audit` for the whole repo, and
+`/ponytail-sec-triage` to review findings with context.
 
 Same dependency lens as [ponytail](https://github.com/DietrichGebert/ponytail):
 "Do I actually need this dep?" Fewer dependencies = smaller supply-chain
@@ -67,7 +68,7 @@ Latest:
 
 Pinned to a version:
 ```
-/plugin marketplace add andypitcher/ponytail-sec@0.2.3
+/plugin marketplace add andypitcher/ponytail-sec@0.2.5
 /plugin install ponytail-sec@ponytail-sec
 ```
 
@@ -101,13 +102,15 @@ Three passes, in order:
                   Prefer: remove > stdlib > vendor > immutable pin > keep floating.
 
 3. Security       Four stages, top-to-bottom. Stage 1 break voids all below.
-   findings       Three kinds, same table, ranked together:
-                    · kind: vulnerability — an exploitable weakness in code you
-                      own: privesc, auth bypass, injection, path traversal.
-                    · kind: hardening — a control missing or too loose (ungated
-                      debug endpoint, RBAC wildcard, missing TLS). Nothing is
-                      broken; you'd rather it did less.
-                    · kind: secret — credential material where it shouldn't be.
+   findings       Two classes, same table, ranked together:
+                    · vulnerability — behaviour contradicts the documented
+                      contract: privesc, auth bypass, injection, path
+                      traversal, hardcoded secrets (tagged secret).
+                      Rated by severity and a CVSS 4.0 score.
+                    · hardening — behaviour matches the contract, but a control
+                      is missing or too loose (ungated debug endpoint, RBAC
+                      wildcard, missing TLS). Rated by efficacy (High/Medium/
+                      Low: how much the fix takes from an attacker) and a CWE.
                   Rank within each stage by attacker leverage removed ÷ lines changed.
                   The smallest change that ruins an attacker's day wins.
                   Default output: up to 3 material findings total; no padding. More only on request.
@@ -117,8 +120,8 @@ Report only what breaks an attack path. Security theater goes unreported.
 
 ## Kill-chain stages
 
-Every security finding lands in one stage, tagged `vulnerability`, `hardening`,
-or `secret`. The triage is practical, not forensic — it's there so you can sort
+Every security finding lands in one stage, with a class: `vulnerability` or
+`hardening`. The split is practical, not forensic — it's there so you can sort
 "there's a way in" from "tighten this", not to be a taxonomy.
 
 ```
@@ -163,21 +166,22 @@ directly or say "harden this", "security review", "is this dep safe",
 Examples: [new service](https://github.com/andypitcher/ponytail-sec/blob/main/examples/companion-diagnostic-service.md) ·
 [dependency](https://github.com/andypitcher/ponytail-sec/blob/main/examples/companion-jexl-dep.md).
 
-**`/ponytail-sec-audit`** — Full project scan. Security findings share one table
-with `# · Class · Rating · Stage · Location · Finding · Fix · Break-risk`.
-Vulnerabilities are `Vulnerability` (or `CVE`) and carry a severity and a
-CVSS 4.0 base score, labelled with its FIRST nomenclature
-(`Severity: High (CVSS-B 8.1)`); hardening items are `Hardening` and carry an
-efficacy — how much attacker leverage the fix removes, as a `High`/`Medium`/`Low`
-judgement (`Efficacy: High`) — plus a required CWE, shown as a badge in the
-finding cell. Vulnerabilities measure how much it hurts; hardening measures how
-well the fix protects. Every finding in every pass has a short title for issue
-tracking, and findings persist as schema v3 JSON. Ends with a blast-radius
-narrative and a frank "if I were you" prioritisation that may differ from the
-score order. Invoke directly or say "full security audit", "audit the project",
-"security scan".
+**`/ponytail-sec-audit`** — Full project scan. Vulnerabilities get a severity
+and a CVSS-B score; hardening gets an efficacy and a CWE. Findings are saved to
+`.ponytail-sec/` and tracked across scans. Ends with a frank "if I were you"
+and an offer to triage. Invoke directly or say "full security audit", "audit
+the project", "security scan".
 
 Example: [full audit with persisted findings](https://github.com/andypitcher/ponytail-sec/blob/main/examples/audit-controller-scan.md).
+
+**`/ponytail-sec-triage`** — The final gate. Proves, disproves, or rescores
+findings using your project's context: up to 5 questions, or free text such as
+docs or a previous advisory. Writes one `<ID>.triage.md` security report per
+finding. Run it from the audit's closing question, as
+`/ponytail-sec-triage S1,S2`, or with a pasted finding.
+
+Examples: [triage walkthrough](https://github.com/andypitcher/ponytail-sec/blob/main/examples/triage-controller-scan.md) ·
+[reclassification](https://github.com/andypitcher/ponytail-sec/blob/main/examples/triage-reclassification.md).
 
 ## Relation
 

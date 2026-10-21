@@ -1,7 +1,7 @@
 {
   "name": "ponytail-sec",
   "version": "0.2.5",
-  "description": "Ponytail security companion and audit: diff-scoped hardening for active development, plus full-project security scans.",
+  "description": "Ponytail security companion, audit, and triage: diff-scoped hardening, full-project scans, and context-aware finding review.",
   "author": {
     "name": "Andy Pitcher",
     "url": "https://github.com/andypitcher"
@@ -9,5 +9,5 @@
   "license": "MIT",
   "homepage": "https://github.com/andypitcher/ponytail-sec",
   "repository": "https://github.com/andypitcher/ponytail-sec",
-  "keywords": ["security", "hardening", "owasp", "kubernetes", "rbac", "supply-chain"]
+  "keywords": ["security", "hardening", "vulnerability", "cve", "owasp", "kubernetes", "rbac", "supply-chain"]
 }
