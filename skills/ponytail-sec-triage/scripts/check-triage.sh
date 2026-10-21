@@ -138,6 +138,8 @@ for file in "${files[@]}"; do
            | "cwe must be CWE-<n>"),
 
           # Fingerprint: <repo>:<path>:<symbol>:<weakness-class>, no line numbers.
+          (select(($f.fingerprint | type) != "string")
+           | "fingerprint must be a string"),
           (select(($f.fingerprint | type) == "string")
            | ($f.fingerprint | split(":")) as $p
            | if ($p | length) != 4 or any($p[]; . == "") then
