@@ -109,11 +109,17 @@ for file in "${files[@]}"; do
            | "cvss must start with CVSS:4.0/"),
           (select($f.class == "vulnerability" and has("cvss_score"))
            | if ($f.cvss_score | type) != "number" then "cvss_score must be a number"
+             elif $f.cvss_score < 0 or $f.cvss_score > 10 then
+               "cvss_score must be between 0 and 10"
              elif $f.severity != ($f.cvss_score | band) then
                "severity \($f.severity) does not match cvss_score \($f.cvss_score) (expected \($f.cvss_score | band))"
              else empty end),
-          (select(has("cvss_score_audit") and ($f.cvss_score_audit | type) != "number")
-           | "cvss_score_audit must be a number"),
+          (select(has("cvss_score_audit"))
+           | if ($f.cvss_score_audit | type) != "number" then
+               "cvss_score_audit must be a number"
+             elif $f.cvss_score_audit < 0 or $f.cvss_score_audit > 10 then
+               "cvss_score_audit must be between 0 and 10"
+             else empty end),
           (select(has("cvss_score_audit") and $f.cvss_score_audit == $f.cvss_score)
            | "cvss_score_audit is only set when the score changed"),
           (select(has("cve") and (($f.cve | type) != "string" or ($f.cve | test("^CVE-[0-9]{4}-[0-9]{4,}$") | not)))
