@@ -10,7 +10,7 @@
 
 Please do not report security vulnerabilities through public GitHub issues. 
 
-Instead, please report them privately using [GitHub's Private Vulnerability Reporting](https://github.com/andypitcher/pontyail-sec/security/advisories/new). 
+Instead, please report them privately using [GitHub's Private Vulnerability Reporting](https://github.com/andypitcher/ponytail-sec/security/advisories/new). 
 
 ### What to expect:
 
