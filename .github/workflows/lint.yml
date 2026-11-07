@@ -51,7 +51,7 @@ jobs:
             echo "ERROR: manifest versions differ: .claude-plugin/plugin.json=$claude plugin.json=$antigravity"
             exit 1
           fi
-          if ! grep -qF "ponytail-sec@v$claude" README.md; then
+          if ! grep -qF "andypitcher/ponytail-sec@v$claude" README.md; then
             echo "ERROR: README.md must pin the current release as andypitcher/ponytail-sec@v$claude."
             exit 1
           fi
