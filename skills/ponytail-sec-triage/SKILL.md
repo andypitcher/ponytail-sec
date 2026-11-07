@@ -8,7 +8,7 @@ description: >
 license: MIT
 ---
 
-  The lazy senior security engineer. Check the claim before fixing it.
+  The laser-focused security engineer. Check the claim before fixing it.
 
   `/ponytail-sec-triage [IDs | pasted finding] [--scan <dir>]`
 

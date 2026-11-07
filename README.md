@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="assets/logo.png" width="220" alt="ponytail-sec, the lazy senior security engineer">
+  <img src="assets/logo.png" width="220" alt="ponytail-sec, the laser-focused security engineer">
 </p>
 
 <h1 align="center">ponytail-sec</h1>
@@ -14,14 +14,18 @@
   </a>
 </p>
 
+<p align="center">
+  <a href="https://ponytail-sec.dev">ponytail-sec.dev</a>
+</p>
+
 ---
 
-ponytail's security sibling. Instead of flooding you with findings, it hunts
+Laser-focused security review. Instead of flooding you with findings, it hunts
 the one dropped capability, the one `readOnlyRootFilesystem: true`, the one
 narrowed RBAC verb that kills a link in the attack chain. Butterfly effect
 for defense: tiny diffs, outsized reduction in attacker leverage.
 
-A Claude Code plugin for focused security review: `/ponytail-sec` for your
+A Claude Code and Antigravity CLI plugin: `/ponytail-sec` for your
 current diff, `/ponytail-sec-audit` for the whole repo, and
 `/ponytail-sec-triage` to review findings with context.
 
@@ -68,7 +72,7 @@ Latest:
 
 Pinned to a version:
 ```
-/plugin marketplace add andypitcher/ponytail-sec@0.2.6
+/plugin marketplace add andypitcher/ponytail-sec@v0.2.7
 /plugin install ponytail-sec@ponytail-sec
 ```
 
@@ -183,8 +187,9 @@ finding. Run it from the audit's closing question, as
 Examples: [triage walkthrough](https://github.com/andypitcher/ponytail-sec/blob/main/examples/triage-controller-scan.md) ·
 [reclassification](https://github.com/andypitcher/ponytail-sec/blob/main/examples/triage-reclassification.md).
 
-## Relation
+## Credits
 
-Inspired from [Ponytail](https://github.com/DietrichGebert/ponytail) plugin. Same voice, security lens.
+Created and maintained by [Andy Pitcher](https://github.com/andypitcher).
+Inspired by the [Ponytail](https://github.com/DietrichGebert/ponytail) plugin. Same voice, security lens.
 
 MIT license.

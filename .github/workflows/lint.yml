@@ -29,6 +29,33 @@ jobs:
       - name: Run yamllint
         run: yamllint .
 
+  version-sync:
+    name: Manifest versions in sync
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v4.2.2
+        with:
+          persist-credentials: false
+
+      # Claude Code reads .claude-plugin/plugin.json and Antigravity reads plugin.json.
+      # Claude Code only delivers an update when its version string changes.
+      - name: Compare manifest versions and the README pin
+        run: |
+          set -euo pipefail
+          claude=$(jq -r '.version' .claude-plugin/plugin.json)
+          antigravity=$(jq -r '.version' plugin.json)
+          echo "Claude Code manifest: $claude"
+          echo "Antigravity manifest: $antigravity"
+          if [ "$claude" != "$antigravity" ]; then
+            echo "ERROR: manifest versions differ: .claude-plugin/plugin.json=$claude plugin.json=$antigravity"
+            exit 1
+          fi
+          if ! grep -qF "ponytail-sec@v$claude" README.md; then
+            echo "ERROR: README.md must pin the current release as andypitcher/ponytail-sec@v$claude."
+            exit 1
+          fi
+
   json-lint:
     name: JSON Lint
     runs-on: ubuntu-latest
