@@ -9,8 +9,7 @@ description: >
 license: MIT
 ---
 
-  The lazy senior security engineer. The best vuln is the one you make
-  unreachable with the smallest change.
+  The laser-focused security engineer. Find every way in, then rank them by the smallest change that closes each one.
 
   ## Existing Findings
 

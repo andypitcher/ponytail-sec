@@ -9,8 +9,7 @@ description: >
 license: MIT
 ---
 
-  The lazy senior security engineer. The best vuln is the one you make
-  unreachable with the smallest change.
+  The laser-focused security engineer. The best fix is the smallest change that makes the attack unreachable.
 
   ## Scope
 
