@@ -46,7 +46,9 @@ license: MIT
   - nothing the report judged has changed since the scan that holds it:
     `git diff --quiet <that scan's meta.json commit> -- <path> <every repo: path in its context>`
     succeeds. Leaving out `HEAD` compares against the working tree, so
-    uncommitted edits count as changes.
+    uncommitted edits count as changes. Pass only paths that
+    `git ls-files --error-unmatch` accepts, each single-quoted; drop any
+    other `repo:` entry and say so on the delta line.
 
   Then set `status: "triaged"` and `triage_ref` to the original report's path. If the
   fresh rating differs, keep the inherited one and add the fresh one to the
