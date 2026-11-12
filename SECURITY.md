@@ -19,3 +19,9 @@ Instead, please report them privately using [GitHub's Private Vulnerability Repo
 * **Status Updates:** We will keep you informed of our progress as we work on a fix.
 * **If Accepted:** We will patch the vulnerability as quickly as possible. Once the fix is released, we will notify you and (with your permission) credit you in the release notes or advisory.
 * **If Declined:** If we determine the issue is not a valid security vulnerability or falls outside our project's threat model, we will provide a clear explanation of our reasoning.
+
+## Prompt surface and scripts
+
+This project ships large language instructions (SKILL.md files) and supporting shell scripts (primarily under `skills/ponytail-sec-triage/scripts/`). These are part of the trusted computing base when the plugin is active. The audit skill is intentionally large (~35k characters) to encode detailed rules. All scripts are read-only validation helpers.
+
+CI workflows run on `pull_request` (with `permissions: read-all`). PRs execute the plugin validation steps from the submitted code.

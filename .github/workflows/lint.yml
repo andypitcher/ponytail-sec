@@ -90,6 +90,9 @@ jobs:
               continue
             fi
             echo "Validating $file"
+            # Large jq expression below enforces the findings.json schema used by
+            # ponytail-sec-audit and triage. It is intentionally strict because it
+            # guards security report integrity. Keep changes minimal and review carefully.
             errors=$(jq -r '
               [
                 (select(.schema_version != 3)

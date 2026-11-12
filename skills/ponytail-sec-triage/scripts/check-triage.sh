@@ -1,5 +1,9 @@
 #!/usr/bin/env bash
 # Validate the YAML frontmatter of triage reports. Read-only.
+#
+# NOTE: This script contains a large jq-based parser. It is part of the
+# trusted base for security triage reports. Complexity is accepted here
+# because it protects the integrity of security findings.
 # Usage: check-triage.sh [--json] [<report.triage.md | scan-dir>...]
 #   No path: every report under the latest scan's triage/.
 #   A directory: every report under <dir>/triage/.

@@ -7,7 +7,7 @@ description: >
 license: MIT
 ---
 
-Ask once before enforcing:
+Ask once before enforcing (in non-interactive/headless runs this is treated as "yes"):
 
 > Enforce dockerfile skill? (yes / no)
 
