@@ -38,13 +38,17 @@ license: MIT
   (`severity`/`cvss`/`cvss_score`/`cvss_nomenclature`, or `efficacy`/`cwe`),
   and its `title` — only when all of these hold:
 
-  - the previous scan has `triage/<ID>.triage.md` for it, matched on
-    `fingerprint` (fall back to location + issue), and the triage skill's
-    `scripts/check-triage.sh` accepts that report;
-  - the code it judged is unchanged:
-    `git diff --quiet <previous meta.json commit> HEAD -- <path>` succeeds.
+  - a triage report exists for it: the previous scan's `triage/<ID>.triage.md`,
+    matched on `fingerprint` (fall back to location + issue), or — when the
+    previous finding was itself inherited — the original report its
+    `triage_ref` names. The triage skill's `scripts/check-triage.sh` must
+    accept that report;
+  - nothing the report judged has changed since the scan that holds it:
+    `git diff --quiet <that scan's meta.json commit> -- <path> <every repo: path in its context>`
+    succeeds. Leaving out `HEAD` compares against the working tree, so
+    uncommitted edits count as changes.
 
-  Then set `status: "triaged"` and `triage_ref` to the report's path. If the
+  Then set `status: "triaged"` and `triage_ref` to the original report's path. If the
   fresh rating differs, keep the inherited one and add the fresh one to the
   delta line:
 
