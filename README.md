@@ -72,7 +72,7 @@ Latest:
 
 Pinned to a version:
 ```
-/plugin marketplace add andypitcher/ponytail-sec@v0.2.7
+/plugin marketplace add andypitcher/ponytail-sec@v0.2.8
 /plugin install ponytail-sec@ponytail-sec
 ```
 
