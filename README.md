@@ -25,7 +25,7 @@ the one dropped capability, the one `readOnlyRootFilesystem: true`, the one
 narrowed RBAC verb that kills a link in the attack chain. Butterfly effect
 for defense: tiny diffs, outsized reduction in attacker leverage.
 
-A Claude Code and Antigravity CLI plugin: `/ponytail-sec` for your
+A Claude Code, Antigravity CLI, and Cursor AI plugin: `/ponytail-sec` for your
 current diff, `/ponytail-sec-audit` for the whole repo, and
 `/ponytail-sec-triage` to review findings with context.
 
@@ -86,6 +86,29 @@ agy plugin install https://github.com/andypitcher/ponytail-sec
 For development/local testing:
 ```bash
 agy plugin install .
+```
+
+### Cursor AI
+
+Cursor AI uses rules stored in `.cursor/rules/`. To ensure reproducible and secure builds, pin to a specific release tag (e.g. `v0.2.8`):
+
+Pinned to a version (Recommended):
+```bash
+mkdir -p .cursor/rules
+curl -sSL "https://raw.githubusercontent.com/andypitcher/ponytail-sec/v0.2.8/.cursor/rules/ponytail-sec-core.mdc" -o .cursor/rules/ponytail-sec-core.mdc
+curl -sSL "https://raw.githubusercontent.com/andypitcher/ponytail-sec/v0.2.8/.cursor/rules/ponytail-sec.mdc" -o .cursor/rules/ponytail-sec.mdc
+curl -sSL "https://raw.githubusercontent.com/andypitcher/ponytail-sec/v0.2.8/.cursor/rules/ponytail-sec-audit.mdc" -o .cursor/rules/ponytail-sec-audit.mdc
+curl -sSL "https://raw.githubusercontent.com/andypitcher/ponytail-sec/v0.2.8/.cursor/rules/ponytail-sec-triage.mdc" -o .cursor/rules/ponytail-sec-triage.mdc
+```
+
+Or clone/download pinned release archive:
+```bash
+curl -sSL https://github.com/andypitcher/ponytail-sec/archive/refs/tags/v0.2.8.tar.gz | tar -xz --strip-components=1 ponytail-sec-0.2.8/.cursor/rules/
+```
+
+For development/local repository usage:
+```bash
+# If using in this repository, rules are already active in .cursor/rules/
 ```
 
 ## How it works
