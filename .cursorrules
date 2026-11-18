@@ -1,0 +1,13 @@
+# Cursor AI Rules Configuration for ponytail-sec
+# For modern Cursor setups, individual rules are managed under .cursor/rules/*.mdc
+
+# Core Behavior:
+# - ponytail-sec companion review: active diff and modified code review (3 passes: code, dep, security)
+# - ponytail-sec-audit: repository-wide security scan with CVSS-B & Efficacy ratings
+# - ponytail-sec-triage: finding triage and verification with context intake
+
+# Rules location:
+# See .cursor/rules/ponytail-sec-core.mdc
+# See .cursor/rules/ponytail-sec.mdc
+# See .cursor/rules/ponytail-sec-audit.mdc
+# See .cursor/rules/ponytail-sec-triage.mdc
