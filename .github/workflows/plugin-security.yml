@@ -9,10 +9,16 @@ on:
 # Declare default permissions as read only.
 permissions: read-all
 
+# A new push to a pull request cancels its outdated run.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   plugin-validate:
     name: Claude plugin validate
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     permissions:
       contents: read
     steps:
