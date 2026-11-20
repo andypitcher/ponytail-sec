@@ -1,0 +1,6 @@
+# Legitimate mentions of exec/network patterns in skills/, agents/, commands/.
+# Format: <path><TAB><exact line text, trimmed>. A new or edited occurrence fails
+# until it is reviewed and listed here.
+
+# Tells the agent NOT to run package runners when collecting scan cost.
+skills/ponytail-sec-audit/SKILL.md	`npx`, `bunx`, `pnpm dlx`, or any package-runner invocation: those fetch and

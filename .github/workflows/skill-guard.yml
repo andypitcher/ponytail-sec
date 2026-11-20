@@ -1,0 +1,60 @@
+name: Skill guard
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# A new push to a pull request cancels its outdated run.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  skill-guard:
+    name: Skill guard
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          persist-credentials: false
+
+      # Exec/network patterns, hidden Unicode, hooks/MCP, front matter and agent tools.
+      - name: Check prompt surface
+        run: python3 -I .github/scripts/skill-guard.py
+
+      # shellcheck ships on the runner image; no install step.
+      - name: Shellcheck scripts and tests
+        run: shellcheck skills/*/scripts/*.sh tests/*.sh
+
+      # Regression tests: hostile .ponytail-sec layouts, and every guard
+      # bypass found in review. Scratch repos only; needs git, jq, python3.
+      - name: Script tests
+        run: bash tests/scripts-test.sh
+
+      - name: Skill guard tests
+        run: bash tests/skill-guard-test.sh
+
+  zizmor:
+    name: zizmor
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          persist-credentials: false
+
+      # The action hash-pins zizmor's wheel; advanced-security off keeps the job
+      # read-only (no SARIF upload, no security-events: write).
+      - name: Audit workflows
+        uses: zizmorcore/zizmor-action@45d7276c9ca790aabd705e31ca99c6185c3e76dd  # v0.8.1
+        with:
+          version: 1.32.0
+          advanced-security: false

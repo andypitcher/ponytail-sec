@@ -4,3 +4,6 @@ updates:
     directory: "/"
     schedule:
       interval: "weekly"
+    # Wait 7 days after a release before proposing it.
+    cooldown:
+      default-days: 7
