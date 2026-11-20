@@ -1,6 +1,6 @@
 {
   "name": "ponytail-sec",
-  "version": "0.2.8",
+  "version": "0.2.9",
   "description": "Laser-focused security companion, audit, and triage for AI coding agents: diff-scoped hardening, full-project scans, and context-aware finding review.",
   "author": {
     "name": "Andy Pitcher",

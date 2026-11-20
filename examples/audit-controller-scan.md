@@ -185,6 +185,7 @@ Findings saved to `.ponytail-sec/audit-20260911-143022-Xk9mQ2`.
   "timestamp": "2026-09-11T14:30:22Z",
   "commit": "d87f7c533703072a304dda39a8f975bc6fab2d39",
   "branch": "main",
+  "dirty": false,
   "scope": "full-project",
   "passes": ["code", "dependencies", "security"],
   "finding_count": {

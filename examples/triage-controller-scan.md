@@ -514,11 +514,11 @@ context:
 ## Check, index, summary
 
 ```
-$ check-triage.sh
+$ check-triage.sh .ponytail-sec/audit-20260911-143022-Xk9mQ2
 OK: 3 triage report(s) valid
-$ build-index.sh
+$ build-index.sh .ponytail-sec/audit-20260911-143022-Xk9mQ2
 Wrote .ponytail-sec/audit-20260911-143022-Xk9mQ2/triage/index.json
-$ shell-summary.sh
+$ shell-summary.sh .ponytail-sec/audit-20260911-143022-Xk9mQ2
 S1  Vulnerability  Severity: High CVSS-B 8.1 → 7.3 (CVSS-BTE)     affected · evidence: 1  fix: proposed (break-risk Medium)
 S2  Hardening      Efficacy: High CWE-269                         affected · evidence: 2  fix: proposed (break-risk High)
 S3  Hardening      Efficacy: Low CWE-1188                         not_affected · evidence: 1  fix: not needed
