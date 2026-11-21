@@ -37,6 +37,8 @@ base=$(cd "$root/.ponytail-sec" && pwd -P)
 # triage-* when $2 is "triage-ok"), with no symlinked state inside it.
 confined() {
   local d=$1 name=${1##*/}
+  # A newline (even a trailing one) would be lost by $( ) in callers.
+  if [[ $d == *$'\n'* ]]; then return 1; fi
   [ "${d%/*}" = "$base" ] && [ -d "$d" ] && [ ! -L "$d" ] || return 1
   case "$name" in
     audit-*) ;;
@@ -88,6 +90,7 @@ if [ -z "$scan" ]; then
   done < <(find "$base" -mindepth 1 -maxdepth 1 -type d -name 'audit-*' -print0 | LC_ALL=C sort -rz)
   [ -n "$scan" ] || die "$none"
 else
+  if [[ $scan == *$'\n'* ]]; then die "scan path must not contain a newline"; fi
   [ -d "$scan" ] || die "not a directory: $scan"
   [ ! -L "${scan%/}" ] || die "scan directory must not be a symlink: $scan"
   scan=$(cd "$scan" && pwd -P)

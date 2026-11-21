@@ -50,7 +50,7 @@ new_repo() {
   printf '%s\n' "$r"
 }
 head_of() { git -C "$1" rev-parse HEAD; }
-sha256() { if command -v sha256sum >/dev/null; then sha256sum "$1"; else shasum -a 256 "$1"; fi | cut -d' ' -f1; }
+sha256() { if command -v sha256sum >/dev/null; then sha256sum; else shasum -a 256; fi <"$1" | cut -d' ' -f1; }
 
 # mkscan <repo> <name> <commit> [schema]: a valid scan with one hardening finding.
 mkscan() {
@@ -119,6 +119,12 @@ mkdir ".ponytail-sec/audit-z
 expect "newline in a name cannot inject the repo root" 0 "audit-20260101-000000-a" -- "$T/find-scan.sh"
 rm -rf ".ponytail-sec/audit-z
 ." meta.json findings.json
+NL=".ponytail-sec/audit-20260501-000000-x"
+mkscan "$R" "${NL##*/}"$'\n' "$H"; ln -s "$WORK/outside/audit-x" "$NL"
+expect "trailing-newline scan skipped, not its symlinked sibling" 0 "audit-20260101-000000-a" -- "$T/find-scan.sh"
+refute "trailing-newline scan: sibling never printed" "audit-20260501-000000-x" -- bash -c "'$T/find-scan.sh' 2>/dev/null"
+expect "--scan with a newline rejected" 1 "must not contain a newline" -- "$T/find-scan.sh" --scan "$NL"$'\n'
+rm -rf "$NL"$'\n' "$NL"
 mkdir -p .ponytail-sec/triage-20260115-000000/triage
 expect "--confine accepts a standalone triage-* dir" 0 "triage-20260115-000000" -- "$T/find-scan.sh" --confine .ponytail-sec/triage-20260115-000000
 expect "--confine rejects a dir outside" 1 "must be a real audit" -- "$T/find-scan.sh" --confine "$WORK/outside"
@@ -147,6 +153,11 @@ mkscan "$R" audit-20260101-000000-a "$H"
 mkscan "$R" audit-20260201-000000-b 0000000000000000000000000000000000000000
 expect "picks the ancestor scan, skips the other" 0 "audit-20260101-000000-a" -- "$A/previous-scan.sh"
 expect "names the skipped scan" 0 "Skipped.*audit-20260201-000000-b" -- "$A/previous-scan.sh"
+NL=".ponytail-sec/audit-20260401-000000-x"
+mkscan "$R" "${NL##*/}"$'\n' "$H"; ln -s "$WORK/outside/audit-x" "$NL"
+expect "trailing-newline scan skipped, not its symlinked sibling" 0 "audit-20260101-000000-a" -- "$A/previous-scan.sh"
+refute "trailing-newline scan: sibling never printed" "audit-20260401-000000-x" -- bash -c "'$A/previous-scan.sh' 2>/dev/null"
+rm -rf "$NL"$'\n' "$NL"
 ln -s "$WORK/outside" .ponytail-sec/audit-20260201-000000-b/triage/S9
 mkscan "$R" audit-20260301-000000-c "$H"; ln -s "$WORK/outside" .ponytail-sec/audit-20260301-000000-c/triage/x
 expect "scan with a symlink under triage/ skipped" 0 "audit-20260101-000000-a" -- "$A/previous-scan.sh"
@@ -179,6 +190,16 @@ refute "sibling symlink path leaks nothing" "SECRET_TOKEN" -- "$T/check-triage.s
 expect "triage/../ detour rejected" 1 "must be a real audit|must be a report" -- "$T/check-triage.sh" "$S/triage/../evil/S1.triage.md"
 refute "triage/../ detour leaks nothing" "SECRET_TOKEN" -- "$T/check-triage.sh" "$S/triage/../evil/S1.triage.md"
 rm "$S/evil"
+mkdir -p "$WORK/out3/sub" "$WORK/out3/triage"; printf -- '---\nSECRET_TOKEN=abcd1234\n---\n' >"$WORK/out3/triage/S1.triage.md"
+ln -s "$WORK/out3/sub" "$S/evil"
+expect "symlink/../ detour rejected" 1 "must be a real audit|must be a report" -- "$T/check-triage.sh" "$S/evil/../triage/S1.triage.md"
+refute "symlink/../ detour leaks nothing" "SECRET_TOKEN" -- "$T/check-triage.sh" "$S/evil/../triage/S1.triage.md"
+rm "$S/evil"
+printf -- '---\nSECRET_TOKEN=abcd1234\n---\n' >outside.triage.md
+cp "$S/triage/S1.triage.md" "$S/triage/junk"$'\n'"outside.triage.md"
+refute "newline in a report name leaks nothing" "SECRET_TOKEN" -- "$T/check-triage.sh" "$S"
+refute "newline in a report name leaks nothing (no args)" "SECRET_TOKEN" -- "$T/check-triage.sh"
+rm -f "$S/triage/junk"$'\n'"outside.triage.md" outside.triage.md
 expect "dir outside .ponytail-sec rejected" 1 "must be a real audit" -- "$T/check-triage.sh" "$WORK/out2"
 
 echo "== build-index.sh, shell-summary.sh, list-findings.sh"

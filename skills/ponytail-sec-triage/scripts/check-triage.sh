@@ -15,8 +15,9 @@ json=0
 files=()
 add_dir() {
   [ -d "$1/triage" ] || return 0
-  while IFS= read -r f; do files+=("$f"); done < <(
-    find "$1/triage" -maxdepth 1 -type f -name '*.triage.md' | LC_ALL=C sort)
+  # NUL-delimited: a report name containing a newline cannot add paths.
+  while IFS= read -r -d '' f; do files+=("$f"); done < <(
+    find "$1/triage" -maxdepth 1 -type f -name '*.triage.md' -print0 | LC_ALL=C sort -z)
 }
 if [ "$#" -eq 0 ]; then
   scan=$("$(dirname "$0")/find-scan.sh")
@@ -32,7 +33,7 @@ for p in "$@"; do
     # The report's own (resolved) directory must be the triage/ of a
     # confined scan: no sibling links, no triage/../ detours.
     [ ! -L "$p" ] || { echo "Error: $p must not be a symlink" >&2; exit 1; }
-    pdir=$(cd "$(dirname "$p")" 2>/dev/null && pwd -P) ||
+    pdir=$(cd -P "$(dirname "$p")" 2>/dev/null && pwd -P) ||
       { echo "Error: no such directory for $p" >&2; exit 1; }
     d=$("$(dirname "$0")/find-scan.sh" --confine "${pdir%/triage}") || exit 1
     [ "$pdir" = "$d/triage" ] ||

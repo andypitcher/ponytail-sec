@@ -18,6 +18,8 @@ dir="$root/.ponytail-sec"
 # NUL-delimited: a directory name containing a newline cannot add candidates.
 while IFS= read -r -d '' d; do
   ok=1
+  # A newline (even a trailing one) would be lost by $( ) in callers.
+  if [[ $d == *$'\n'* ]]; then ok=0; fi
   for f in "" /meta.json /findings.json /triage; do
     [ ! -L "$d$f" ] || ok=0
   done
