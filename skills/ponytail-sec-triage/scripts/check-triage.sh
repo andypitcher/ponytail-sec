@@ -15,15 +15,31 @@ json=0
 files=()
 add_dir() {
   [ -d "$1/triage" ] || return 0
-  while IFS= read -r f; do files+=("$f"); done < <(
-    find "$1/triage" -maxdepth 1 -type f -name '*.triage.md' | LC_ALL=C sort)
+  # NUL-delimited: a report name containing a newline cannot add paths.
+  while IFS= read -r -d '' f; do files+=("$f"); done < <(
+    find "$1/triage" -maxdepth 1 -type f -name '*.triage.md' -print0 | LC_ALL=C sort -z)
 }
 if [ "$#" -eq 0 ]; then
   scan=$("$(dirname "$0")/find-scan.sh")
   add_dir "$scan"
 fi
+# Every directory or report given (an audit scan, a triage_ref target,
+# standalone triage) must sit in a confined scan under .ponytail-sec/.
 for p in "$@"; do
-  if [ -d "$p" ]; then add_dir "$p"; else files+=("$p"); fi
+  if [ -d "$p" ]; then
+    d=$("$(dirname "$0")/find-scan.sh" --confine "$p") || exit 1
+    add_dir "$d"
+  else
+    # The report's own (resolved) directory must be the triage/ of a
+    # confined scan: no sibling links, no triage/../ detours.
+    [ ! -L "$p" ] || { echo "Error: $p must not be a symlink" >&2; exit 1; }
+    pdir=$(cd -P "$(dirname "$p")" 2>/dev/null && pwd -P) ||
+      { echo "Error: no such directory for $p" >&2; exit 1; }
+    d=$("$(dirname "$0")/find-scan.sh" --confine "${pdir%/triage}") || exit 1
+    [ "$pdir" = "$d/triage" ] ||
+      { echo "Error: $p must be a report directly under a scan's triage/" >&2; exit 1; }
+    files+=("$p")
+  fi
 done
 [ "${#files[@]}" -gt 0 ] || { echo "Error: no triage reports found" >&2; exit 1; }
 

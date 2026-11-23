@@ -4,7 +4,9 @@
 set -euo pipefail
 
 here=$(dirname "$0")
-dir=${1:-$("$here/find-scan.sh")}
+# Confine an explicit <dir> too (audit-* or standalone triage-*): this is
+# the one script that writes.
+dir=$("$here/find-scan.sh" ${1:+--confine "$1"})
 reports=$("$here/check-triage.sh" --json "$dir")
 
 tmp=$(mktemp "$dir/triage/.index.XXXXXX")
@@ -13,6 +15,7 @@ jq --arg source "$(basename "$(cd "$dir" && pwd)")" '
   {source: $source,
    findings: sort_by(.id[:1], (.id[1:] | tonumber))}
 ' <<<"$reports" >"$tmp"
+# find-scan.sh already refused any symlink under triage/.
 mv "$tmp" "$dir/triage/index.json"
 trap - EXIT
 echo "Wrote $dir/triage/index.json"
