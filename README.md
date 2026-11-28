@@ -101,16 +101,25 @@ files, then copy them into your **per-user** skills directory — nothing runs o
 your machine and the skills never live inside an untrusted repo:
 
 ```bash
-# clone to a throwaway dir, pin to a release tag, and check the commit
-git clone --depth 1 --branch v0.2.9 https://github.com/andypitcher/ponytail-sec /tmp/pts
-git -C /tmp/pts rev-parse HEAD   # compare to the commit the v0.2.9 release points to
-
-# copy the skills into your per-user skills directory
-cp -r /tmp/pts/skills/ponytail-sec       ~/.cursor/skills/   # Cursor
-cp -r /tmp/pts/skills/ponytail-sec-audit ~/.cursor/skills/
-cp -r /tmp/pts/skills/ponytail-sec-triage ~/.cursor/skills/
-# Gemini CLI → ~/.gemini/skills · GitHub Copilot → ~/.copilot/skills
+# clone the release tag into a fresh scratch dir, then check it is the v0.2.9 commit
+d=$(mktemp -d)
+git clone --depth 1 --branch v0.2.9 https://github.com/andypitcher/ponytail-sec "$d"
+[ "$(git -C "$d" rev-parse HEAD)" = 95c968d62791a93f65110f4ab7444b00f74889db ] \
+  && echo "commit OK" || echo "COMMIT MISMATCH: do not install"
 ```
+
+Continue only if it printed `commit OK`. Then replace (never merge into) any
+existing copy in your per-user skills directory:
+
+```bash
+dest=~/.cursor/skills   # Gemini CLI: ~/.gemini/skills · GitHub Copilot: ~/.copilot/skills
+mkdir -p "$dest"
+for s in ponytail-sec ponytail-sec-audit ponytail-sec-triage; do
+  rm -rf "${dest:?}/$s" && cp -r "$d/skills/$s" "$dest/"
+done
+```
+
+Codex CLI reads the per-project directory described next.
 
 A per-project `.agents/skills/` directory is read by all these agents too — but
 **a hostile repo under audit can ship its own `.agents/skills/ponytail-sec/`**.

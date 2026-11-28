@@ -67,13 +67,13 @@ assert_evidence_guard() {
 }
 # Any documented package-runner install of the skills CLI must pin a full semver
 # (skills@X.Y.Z) — a floating install runs third-party code with full privileges.
-# Extract each runner command (stopping at #, && or ;) from README and SECURITY,
+# Extract each runner command (stopping at #, &, ; or |) from README and SECURITY,
 # so a pinned command can't hide an unpinned one and a trailing comment can't
-# satisfy the check; covers npx, bunx and pnpm dlx. Known limit: a command split
-# across lines with a trailing backslash is not matched.
+# satisfy the check; covers npx, bunx, pnpm dlx and yarn dlx. Known limit: a
+# command split across lines with a trailing backslash is not matched.
 assert_docs_runner_pinned() {
   local bad
-  bad=$(grep -rhoE '(npx|bunx|pnpm dlx)[^#&;]*skills[^#&;]*\badd\b' README.md SECURITY.md \
+  bad=$(grep -rhoE '(npx|bunx|pnpm dlx|yarn dlx)[^#&;|]*skills[^#&;|]*\badd\b' README.md SECURITY.md \
         | grep -Ev 'skills@[0-9]+\.[0-9]+\.[0-9]+' || true)
   [ -z "$bad" ]
 }

@@ -107,7 +107,7 @@ Claude Code enforces permissions through your settings; a plugin cannot. To run 
 
 ### Hardening on other agents
 
-Claude Code's enforcement — read-only `allowed-tools`, per-command permission prompts, and the sandbox — cannot be shipped inside a skill. A skill can ask an agent to stay read-only; only the host runtime can enforce it. To get close to the Claude Code posture elsewhere:
+Claude Code's enforcement — your permission settings, per-command permission prompts, the sandbox, and the triage subagent's read-only tool list — cannot be shipped inside a skill. A skill can ask an agent to stay read-only; only the host runtime can enforce it. To get close to the Claude Code posture elsewhere:
 
 - **Isolate first.** Audit untrusted repositories inside a container, devcontainer or VM with no cloud credentials or SSH keys in the environment. This is the one control that is equally strong on every agent.
 - **Gate the agent's tools behind approval.** Require per-command approval before any shell command or file write, through that agent's own settings — Cursor's command allow/deny list, Codex CLI's approval mode, Gemini CLI's tool permissions, GitHub Copilot's allowed tools. The companion review (`ponytail-sec`) is read-only, but **the audit and triage skills run their bundled shell scripts and write under `.ponytail-sec/`** — so don't deny shell and write outright; keep them gated behind approval and approve only the plugin's own script paths, never a blanket "always allow".
