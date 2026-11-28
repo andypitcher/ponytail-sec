@@ -41,6 +41,12 @@ jobs:
       - name: Skill guard tests
         run: bash tests/skill-guard-test.sh
 
+      # Offline per-agent install-compatibility checks for the flagship skills
+      # (npx skills: Cursor, Codex, Gemini CLI, GitHub Copilot, OpenCode). No
+      # network, no npx: asserts the SKILL.md contract each agent CLI expects.
+      - name: Skills compatibility tests
+        run: bash tests/skills-compat-test.sh
+
   zizmor:
     name: zizmor
     runs-on: ubuntu-latest
