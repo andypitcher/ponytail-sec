@@ -12,6 +12,12 @@
   <a href="https://securityscorecards.dev/viewer/?uri=github.com/andypitcher/ponytail-sec">
     <img src="https://api.securityscorecards.dev/projects/github.com/andypitcher/ponytail-sec/badge" alt="OpenSSF Scorecard">
   </a>
+  <a href="https://github.com/andypitcher/ponytail-sec/actions/workflows/skill-guard.yml">
+    <img src="https://github.com/andypitcher/ponytail-sec/actions/workflows/skill-guard.yml/badge.svg" alt="Skill guard CI">
+  </a>
+  <a href="https://github.com/andypitcher/ponytail-sec/blob/main/LICENSE">
+    <img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="MIT license">
+  </a>
 </p>
 
 <p align="center">
