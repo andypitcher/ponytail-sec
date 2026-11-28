@@ -7,8 +7,8 @@ or auto-run capabilities. Stdlib only; run from the repo root:
 Checks (tracked files only):
   1. exec/network patterns and load-time shell injection (!`cmd` in skills,
      !{cmd} in command TOML) in skills/, agents/, commands/ -- allowlist below
-  2. invisible, bidi or variation-selector Unicode in any tracked text file
-     (prompt-injection carriers)
+  2. invisible, bidi or variation-selector Unicode, or C0/C1 control
+     characters, in any tracked text file (prompt-injection carriers)
   3. hooks, MCP servers or LSP servers anywhere in the plugin
   4. SKILL.md and command .md front matter must parse, use allowlisted keys
      only (no hooks), and pre-approve read-only tools only (allowed-tools
@@ -46,11 +46,15 @@ EXEC_PATTERNS = re.compile(
 # line/paragraph separators, plus invisible letters and marks outside Cf.
 INVISIBLE_EXTRA = set("\u034f\u115f\u1160\u17b4\u17b5\u3164\uffa0") | {
     chr(c) for c in range(0xE0100, 0xE01F0)}
+# C0/C1 controls other than tab and CR: an ESC sequence or backspaces hide
+# text in a terminal diff. The line-break controls are left to ODD_BREAK.
+CONTROL = re.compile("[\x00-\x08\x0e-\x1b\x1f\x7f-\x84\x86-\x9f]")
 
 
 def hidden_chars(line):
     return [c for c in line
-            if unicodedata.category(c) in ("Cf", "Zl", "Zp") or c in INVISIBLE_EXTRA]
+            if unicodedata.category(c) in ("Cf", "Zl", "Zp") or c in INVISIBLE_EXTRA
+            or CONTROL.match(c)]
 
 
 # One selector after an emoji (e.g. the U+FE0F in a warning sign) is normal;

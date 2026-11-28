@@ -125,6 +125,15 @@ EOF
 case_ "Hangul filler" "U+3164" <<'EOF'
 printf 'a\xe3\x85\xa4b\n' > commands/u.toml
 EOF
+case_ "terminal escape conceals text" "U+001B" <<'EOF'
+mkdir -p skills/x; printf -- '---\nname: x\ndescription: x\n---\nok\x1b[8m hidden\x1b[0m\n' > skills/x/SKILL.md
+EOF
+case_ "backspaces overwrite text" "U+0008" <<'EOF'
+printf -- '---\ndescription: x\n---\nhidden\x08\x08\x08\x08\x08\x08shown\n' > commands/x.md
+EOF
+case_ "C1 control (CSI)" "U+009B" <<'EOF'
+printf 'a\xc2\x9b8mb\n' > commands/u.toml
+EOF
 case_ "lone CR line endings" "line break other than" <<'EOF'
 mkdir -p skills/cr; { printf -- '---\rname: cr\rdescription: x\r---\r'; head -c 30000 /dev/zero | tr '\0' 'a'; } > skills/cr/SKILL.md
 EOF
