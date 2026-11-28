@@ -58,7 +58,9 @@ for file in "${files[@]}"; do
       '. + [{path: $path, content: $content}]' <<<"$evidence_files")
   done < <(find "$tdir" -mindepth 2 -type f -print0)
 
-  result=$(jq -R -s --arg name "${file##*/}" --argjson evidence_files "$evidence_files" '
+  # Evidence is read from a pipe: as one argument it hits the OS limit
+  # (128 KiB per argument on Linux) and jq never starts.
+  result=$(jq -R -s --arg name "${file##*/}" --slurpfile evidence_files <(printf '%s' "$evidence_files") '
     def unq:
       if test("^\".*\"$") then (try fromjson catch error("bad quoted string: \(.)"))
       else . end;
@@ -204,7 +206,7 @@ for file in "${files[@]}"; do
            | "evidence must not be a PoC source file: \($e)"),
           (select(($f.evidence | type) == "array") | $f.evidence[]
            | select(type == "string") as $e
-           | ($evidence_files[] | select(.path == $e) | .content
+           | ($evidence_files[0][] | select(.path == $e) | .content
               | sub("\\s+$"; "") | split("\n")) as $lines
            | select((($lines[0] | sub("\\r$"; "") | test("^\\$ .+")) | not)
                     or (($lines[-1] | sub("\\r$"; "") | test("^exit=[0-9]+$")) | not))
