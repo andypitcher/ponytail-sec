@@ -12,6 +12,12 @@
   <a href="https://securityscorecards.dev/viewer/?uri=github.com/andypitcher/ponytail-sec">
     <img src="https://api.securityscorecards.dev/projects/github.com/andypitcher/ponytail-sec/badge" alt="OpenSSF Scorecard">
   </a>
+  <a href="https://github.com/andypitcher/ponytail-sec/actions/workflows/skill-guard.yml">
+    <img src="https://github.com/andypitcher/ponytail-sec/actions/workflows/skill-guard.yml/badge.svg" alt="Skill guard CI">
+  </a>
+  <a href="https://github.com/andypitcher/ponytail-sec/blob/main/LICENSE">
+    <img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="MIT license">
+  </a>
 </p>
 
 <p align="center">
@@ -25,9 +31,11 @@ the one dropped capability, the one `readOnlyRootFilesystem: true`, the one
 narrowed RBAC verb that kills a link in the attack chain. Butterfly effect
 for defense: tiny diffs, outsized reduction in attacker leverage.
 
-A Claude Code and Antigravity CLI plugin: `/ponytail-sec` for your
+A plugin for Claude Code and Antigravity CLI — `/ponytail-sec` for your
 current diff, `/ponytail-sec-audit` for the whole repo, and
-`/ponytail-sec-triage` to review findings with context.
+`/ponytail-sec-triage` to review findings with context — and a set of skills
+you can install into Cursor, Codex CLI, Gemini CLI, GitHub Copilot and other
+agents.
 
 Same dependency lens as [ponytail](https://github.com/DietrichGebert/ponytail):
 "Do I actually need this dep?" Fewer dependencies = smaller supply-chain
@@ -62,6 +70,9 @@ One diff. One closed kill-chain link.
 
 ## Install
 
+Pick the most secure path your agent supports. Native and manual installs run no
+third-party installer; `npx` is offered last, as a convenience with a trade-off.
+
 ### Claude Code
 
 Latest:
@@ -87,6 +98,64 @@ For development/local testing:
 ```bash
 agy plugin install .
 ```
+
+### Cursor, Codex CLI, Gemini CLI, GitHub Copilot — manual (recommended)
+
+The skills are small, CI-guarded text files. Clone to a scratch directory (not
+inside the repo you're auditing), pin to a release, verify its commit, review the
+files, then copy them into your **per-user** skills directory — nothing runs on
+your machine and the skills never live inside an untrusted repo:
+
+```bash
+# clone the release tag into a fresh scratch dir, then check it is the v0.2.9 commit
+d=$(mktemp -d)
+git clone --depth 1 --branch v0.2.9 https://github.com/andypitcher/ponytail-sec "$d"
+[ "$(git -C "$d" rev-parse HEAD)" = 95c968d62791a93f65110f4ab7444b00f74889db ] \
+  && echo "commit OK" || echo "COMMIT MISMATCH: do not install"
+```
+
+Continue only if it printed `commit OK`. Then replace (never merge into) any
+existing copy in your per-user skills directory:
+
+```bash
+dest=~/.cursor/skills   # Gemini CLI: ~/.gemini/skills · GitHub Copilot: ~/.copilot/skills
+mkdir -p "$dest"
+for s in ponytail-sec ponytail-sec-audit ponytail-sec-triage; do
+  rm -rf "${dest:?}/$s" && cp -r "$d/skills/$s" "$dest/"
+done
+```
+
+Codex CLI reads the per-project directory described next.
+
+A per-project `.agents/skills/` directory is read by all these agents too — but
+**a hostile repo under audit can ship its own `.agents/skills/ponytail-sec/`**.
+If you use the project directory, create it fresh (`rm -rf
+.agents/skills/ponytail-sec` first) and never merge into an existing one. For
+untrusted code, prefer the per-user path above.
+
+### Quick install with npx (any agent)
+
+> ⚠️ **Trade-off:** `npx` downloads and runs the third-party
+> [`skills`](https://skills.sh) CLI **and its dependencies with your full
+> privileges, outside any sandbox, before any ponytail-sec check applies.**
+> Pinning the CLI version aids reproducibility but is **not** an integrity
+> guarantee, and `@ponytail-sec` selects the *skill*, not a version — `npx`
+> installs the skill from the repo's default branch (HEAD), so the install is
+> **not pinned**; only the manual path above pins a release. On a machine holding
+> real credentials, prefer the manual or native path; use `npx` in a
+> container/throwaway environment, or only if you trust and have reviewed the
+> CLI. Needs Node ≥ 22.20.
+
+```bash
+npx skills@1.9.1 add andypitcher/ponytail-sec@ponytail-sec -a cursor
+npx skills@1.9.1 add andypitcher/ponytail-sec@ponytail-sec-audit -a codex -a gemini-cli -a github-copilot
+```
+
+Available skills: `ponytail-sec`, `ponytail-sec-audit`, `ponytail-sec-triage`.
+
+Slash commands and the read-only triage subagent are Claude Code and Antigravity
+features. On other agents, invoke a skill by asking — "security review", "audit
+the project", "triage these findings" — and triage runs inline.
 
 ## How it works
 
